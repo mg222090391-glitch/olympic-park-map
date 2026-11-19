@@ -1,1 +1,42 @@
-<!-- index.html: 팀원3(이삭) 담당. 뼈대를 올리면 이 파일을 덮어쓰세요. -->
+<!DOCTYPE html>
+<!-- 임시 index.html (팀원1이 지도 확인용으로 올림). 팀원3(이삭)이 뼈대를 올리면 이 파일 전체를 덮어쓰세요. -->
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>올림픽공원 편의시설 지도 (개발 중)</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="style.css">
+<style>
+  /* 임시 모양. 진짜 디자인은 팀원3의 style.css가 정한다. */
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 12px; }
+  h1 { font-size: 18px; margin: 0 0 8px; }
+  .dev-note { background: #fef3c7; padding: 8px 10px; border-radius: 6px; font-size: 14px; margin-bottom: 10px; }
+  #map { height: 70vh; border-radius: 8px; border: 1px solid #ccc; }
+  .mk { border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 2px #000; background: #2563eb; }
+  .mk-heat { background: #ea580c; } .mk-cold { background: #0891b2; } .mk-charger { background: #16a34a; }
+  .mk-elevator { background: #7c3aed; } .mk-aed { background: #dc2626; } .mk-facility { background: #6b7280; }
+  .mk-me { background: #111; border-color: #facc15; }
+  .is-highlight { transform: scale(1.3); box-shadow: 0 0 0 3px #facc15; } .is-dim { opacity: .3; }
+  .map-notice-item { background: #fff; padding: 6px 8px; border-radius: 6px; margin-top: 4px; max-width: 260px; box-shadow: 0 1px 4px #0003; }
+</style>
+</head>
+<body>
+  <h1>올림픽공원 편의시설 지도</h1>
+  <p class="dev-note">개발 중인 임시 화면이에요. 시설 데이터(data/olympic_park_data.json)가 올라오면 지도에 시설이 표시돼요.</p>
+
+  <section id="condition-card"></section>
+  <section id="profile-select"></section>
+  <section id="filter-bar"></section>
+  <div id="map"></div>
+  <section id="recommend-list"></section>
+  <section id="parking-section"></section>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="ui.js"></script>
+  <script src="map.js"></script>
+  <script src="weather.js"></script>
+  <script src="parking.js"></script>
+</body>
+</html>

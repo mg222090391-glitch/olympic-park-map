@@ -11,6 +11,7 @@
    6-2) 'routeready' 들으면 → #recommend-list 맨 위에 '추천 동선(들를 곳 순서)' 그리기 [팀원1 추가]
    7) 추천 목록 항목 누르면 → 'focusplace' 보냄 (detail: { lat, lng })
    8) '어디 가요?' 버튼 → appState.destination 갱신 → 'destinationchange' 보냄 [팀원1 추가]
+   9) 출발지 버튼 → 'originpick' 보냄, map.js의 'originchange'를 들으면 눌린 버튼·문구를 맞춘다 [팀원1 추가]
       화장실이 아닌 곳을 고르면 #recommend-list에 window.destList(가까운 순, 필요한 정보만)를 그린다
    ※ 이벤트는 모두 document에서 보내고 듣는다 (팀 약속 7번)
    ===================================================================== */
@@ -599,6 +600,26 @@
     body.innerHTML = '<p class="status is-error">추천 목록을 아직 만들지 못했어요. 잠시 후 새로고침해 주세요.</p>';
   }
 
+  /* ---------- 5-3. 출발지 고르기 [팀원1 추가] ---------- */
+  function handleOriginClick(event) {
+    var btn = event.target.closest('.origin-btn');
+    if (!btn) return;
+    btn.classList.add('is-busy');
+    send('originpick', { key: btn.getAttribute('data-origin') });
+  }
+
+  function renderOrigin(event) {
+    var d = (event && event.detail) || {};
+    Array.prototype.forEach.call(document.querySelectorAll('.origin-btn'), function (btn) {
+      btn.classList.remove('is-busy');
+      btn.setAttribute('aria-pressed', btn.getAttribute('data-origin') === d.key ? 'true' : 'false');
+    });
+    var now = $('[data-role="origin-now"]');
+    if (now && d.label) {
+      now.textContent = '지금 출발 위치: ' + d.label;
+    }
+  }
+
   /* ---------- 8-1. 가고 싶은 곳 목록 [팀원1 추가] ---------- */
   // 지금 길안내 중인 목적지를 목록에서 표시 (aria-current)
   function markGuideTarget() {
@@ -738,6 +759,7 @@
   document.addEventListener('conditionready', renderCondition);
   document.addEventListener('recommendready', renderRecommendations);
   document.addEventListener('routeready', renderRoutePlan);   // [팀원1 추가]
+  document.addEventListener('originchange', renderOrigin);    // [팀원1 추가]
 
   // map.js가 시설 데이터를 못 불러오면 보내는 이벤트 → 15초 기다리지 않고 바로 안내
   document.addEventListener('mapdataerror', function () {
@@ -760,6 +782,8 @@
 
     var dests = $('#dest-select .dest-options');                 // [팀원1 추가]
     if (dests) dests.addEventListener('click', handleDestClick);
+    var origins = $('.origin-options');                            // [팀원1 추가]
+    if (origins) origins.addEventListener('click', handleOriginClick);
 
     var rec = document.getElementById('recommend-list');
     if (rec) rec.addEventListener('click', handleRecommendClick);

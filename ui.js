@@ -391,6 +391,16 @@
 
   /* ---------- 7. 오늘의 컨디션 카드 ---------- */
 
+  // 카드 색 테마: rain | hot | cold | mild
+  function weatherKind(w) {
+    if (w.rain === true) return 'rain';
+    var f = toNumber(w.feelsLike);
+    if (isNaN(f)) f = toNumber(w.temp);
+    if (!isNaN(f) && f >= 28) return 'hot';
+    if (!isNaN(f) && f <= 5) return 'cold';
+    return 'mild';
+  }
+
   var conditionTimer = null;
 
   function renderCondition() {
@@ -403,6 +413,10 @@
 
     var w = info.weather || {};
     var skyText = formatSky(w.sky);
+
+    // 카드 색을 날씨에 맞춘다 (style.css의 #condition-card[data-wx])
+    var card = document.getElementById('condition-card');
+    if (card) card.setAttribute('data-wx', weatherKind(w));
     var messages = Array.isArray(info.messages) ? info.messages : [];
 
     // 위쪽 배지: 예시 데이터 / 오늘 공연 있음

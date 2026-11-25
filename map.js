@@ -551,7 +551,7 @@ ${kindVars}
   LayerControl.prototype.onAdd = function () {
     const div = document.createElement('div');
     // 지도 폭이 넉넉할 때만 펼친 채로 시작(좁으면 팝업·핀을 가리므로 접어 둔다)
-    div.className = 'maplibregl-ctrl op-panel' + (S.map.getContainer().clientWidth < 900 ? ' is-collapsed' : '');
+    div.className = 'maplibregl-ctrl op-panel is-collapsed';   // 지도를 가리지 않게 처음엔 접어 둔다(누르면 펼침)
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5z" fill="#2563eb"/><path d="m3 12.5 9 5 9-5M3 16.5l9 5 9-5" fill="none" stroke="#2563eb" stroke-width="2" stroke-linejoin="round"/></svg>시설 레이어';

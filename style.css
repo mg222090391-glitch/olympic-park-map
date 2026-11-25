@@ -1058,6 +1058,159 @@ a { color: var(--c-primary); text-underline-offset: 3px; }
 .bottom-nav a span { font-size: 1.25rem; line-height: 1.1; }
 .bottom-nav a:active { color: var(--c-primary); background: var(--c-primary-soft); }
 
+/* ---------- 14-2. 다듬기 (2026-11 2차) ---------- */
+/* 배경: 위쪽에 아주 옅은 초록 빛 */
+body {
+  background:
+    radial-gradient(1200px 420px at 50% -120px, rgba(20, 112, 75, 0.10), rgba(20, 112, 75, 0) 70%),
+    var(--c-bg);
+  background-repeat: no-repeat;
+  background-color: var(--c-bg);
+}
+
+/* 카드 제목 앞 단계 번호에 은은한 테두리 */
+.step-num { box-shadow: 0 0 0 3px var(--c-primary-soft); }
+
+/* 오늘의 컨디션: 날씨에 따라 카드 색이 바뀜 (ui.js가 data-wx를 붙임) */
+#condition-card {
+  position: relative;
+  overflow: hidden;
+  transition: background-color 0.3s;
+}
+#condition-card[data-wx] { border-color: transparent; }
+#condition-card[data-wx="hot"]  { background: linear-gradient(160deg, #fff1e2 0%, #fff8f1 45%, #ffffff 100%); }
+#condition-card[data-wx="cold"] { background: linear-gradient(160deg, #e3f1ff 0%, #f2f8ff 45%, #ffffff 100%); }
+#condition-card[data-wx="rain"] { background: linear-gradient(160deg, #e6ebff 0%, #f3f5ff 45%, #ffffff 100%); }
+#condition-card[data-wx="mild"] { background: linear-gradient(160deg, #e5f4ea 0%, #f3faf5 45%, #ffffff 100%); }
+#condition-card[data-wx="hot"]  .temp-main .value { color: #c2410c; }
+#condition-card[data-wx="cold"] .temp-main .value { color: #0369a1; }
+#condition-card[data-wx="rain"] .temp-main .value { color: #3730a3; }
+#condition-card[data-wx="mild"] .temp-main .value { color: var(--c-primary-strong); }
+#condition-card[data-wx] .weather-items li {
+  background: rgba(255, 255, 255, 0.78);
+  border-color: rgba(16, 40, 28, 0.08);
+}
+#condition-card[data-wx] .messages li { background: rgba(255, 255, 255, 0.82); }
+#condition-card[data-wx="hot"]  .messages li::before { background: #c2410c; }
+#condition-card[data-wx="cold"] .messages li::before { background: #0369a1; }
+#condition-card[data-wx="rain"] .messages li::before { background: #3730a3; }
+
+/* 추천 동선·길안내: 상자 대신 '출발 → 1 → 2' 타임라인 */
+.route-plan {
+  margin: 0 0 18px;
+  padding: 0 0 18px;
+  border: 0;
+  border-bottom: 1px solid var(--c-border);
+  border-radius: 0;
+  background: transparent;
+}
+.route-plan .recommend-title { margin-bottom: 10px; }
+.route-plan .recommend-title .title-icon { margin-right: 6px; }
+.route-weather {
+  margin: 0 0 14px;
+  padding: 8px 12px;
+  border: 0;
+  border-left: 3px solid #f9a8d4;
+  border-radius: 0 10px 10px 0;
+  font-size: 0.8125rem;
+  color: #3d4741;
+}
+.route-weather.is-hot  { border-left-color: #fb923c; }
+.route-weather.is-cold { border-left-color: #38bdf8; }
+.route-weather.is-rain { border-left-color: #818cf8; }
+
+.route-steps {
+  position: relative;
+  gap: 2px;
+  padding-top: 34px;
+}
+/* 출발점 */
+.route-steps::after {
+  content: "출발 · 기준 위치";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 28px;
+  padding-left: 46px;
+  line-height: 28px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--c-muted);
+  background: radial-gradient(circle at 31px 50%, var(--mk-me) 0 6px, #fff 6.5px 9px, rgba(37, 99, 235, 0.25) 9.5px 11px, transparent 11.5px) no-repeat;
+}
+/* 이어지는 점선 */
+.route-steps::before {
+  content: "";
+  position: absolute;
+  left: 30px;
+  top: 16px;
+  bottom: 34px;
+  width: 0;
+  border-left: 2.5px dashed #f472b6;
+}
+.route-steps .rec-item {
+  position: relative;
+  min-height: 0;
+  padding: 10px 10px 10px 12px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.route-steps .rec-item:hover { background: #fdf2f8; box-shadow: none; }
+.route-steps .rec-item.is-weather-stop { border: 0; }
+.route-steps .rec-rank {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px #fff;
+  position: relative;
+  z-index: 1;
+}
+.route-total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin-top: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #fdf2f8;
+  color: #831843;
+  font-size: 0.9375rem;
+}
+.route-total::before { content: "🚶"; }
+.route-total .stop-tag { background: #fff; border-color: #fbcfe8; color: #9d174d; }
+.route-plan .hint { margin-top: 8px; font-size: 0.8125rem; }
+.route-warn {
+  margin-top: 6px;
+  padding: 0;
+  background: transparent;
+  color: var(--c-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* 추천 목록 순위 동그라미 */
+.rec-rank { border-radius: 50%; }
+
+/* 지도 카드: 안내 문구는 작게 */
+.map-card #female-hint { font-size: 0.8125rem; }
+
+/* 가고 싶은 곳 타일: 누르면 살짝 떠오름 */
+.dest-btn { box-shadow: 0 1px 2px rgba(16, 40, 28, 0.04); }
+.dest-btn:active { transform: translateY(1px); }
+.dest-btn[aria-pressed="true"] .dest-icon { transform: scale(1.08); }
+.dest-icon { transition: transform 0.15s; }
+
+/* 지도 저작권 표시는 작게 */
+.maplibregl-ctrl-attrib { font-size: 11px; }
+
+/* 휴대폰: 머리글을 짧게 (카드에 ①②③ 번호가 있어서 안내 문장은 숨김) */
+@media (max-width: 719px) {
+  .site-header { padding: 14px 16px 16px; }
+  .how-to { display: none; }
+  .site-tagline { font-size: 0.8125rem; }
+  .brand-mark { width: 40px; height: 40px; }
+}
+
 /* ---------- 15. 화면 크기별 배치 ---------- */
 
 /* 태블릿: 컨디션·상황 나란히, 지도는 한 줄 전체 */
@@ -1148,6 +1301,8 @@ a { color: var(--c-primary); text-underline-offset: 3px; }
   #condition-card, #profile-select, #dest-select, .rec-card { padding: 18px; }
   .dest-options { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .dest-btn { min-height: 66px; }
+  .chip { min-height: 44px; padding: 4px 14px 4px 10px; }
+  .keyword-input, .keyword-form .btn { min-height: 48px; }
   .temp .value { font-size: 2.25rem; }
 
   .chart-box { height: 320px; }

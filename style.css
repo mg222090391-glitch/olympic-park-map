@@ -130,7 +130,7 @@ a { color: var(--c-primary); text-underline-offset: 3px; }
 .skip-link:focus { top: 8px; }
 
 /* 바로가기 링크로 이동했을 때 위에 살짝 여백 */
-#profile-select, #map-section, #recommend-list, #parking-section { scroll-margin-top: 12px; }
+#profile-select, #dest-select, #map-section, #recommend-list, #parking-section { scroll-margin-top: 12px; }
 
 /* ---------- 3. 맨 위 머리글 ---------- */
 .site-header {
@@ -231,6 +231,7 @@ a { color: var(--c-primary); text-underline-offset: 3px; }
   grid-template-areas:
     "cond"
     "prof"
+    "dest"
     "map"
     "rec";
   gap: var(--gap);
@@ -238,6 +239,7 @@ a { color: var(--c-primary); text-underline-offset: 3px; }
 }
 #condition-card  { grid-area: cond; }
 #profile-select  { grid-area: prof; }
+#dest-select     { grid-area: dest; }
 .map-card        { grid-area: map; }
 .rec-card        { grid-area: rec; }
 
@@ -619,6 +621,126 @@ a { color: var(--c-primary); text-underline-offset: 3px; }
   font-size: 0.875rem;
 }
 
+/* ---------- 8-2. 가고 싶은 곳 [팀원1 추가] ---------- */
+#dest-select .card-title { margin-bottom: 12px; }
+.dest-options {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.dest-btn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 72px;
+  padding: 8px 4px;
+  border: 1.5px solid var(--c-border);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--c-text);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s, box-shadow 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.dest-btn:hover { border-color: var(--c-border-strong); background: var(--c-surface-2); }
+.dest-icon { font-size: 1.5rem; line-height: 1; }
+.dest-btn.is-recommended { border-color: #9ccfb4; }
+.dest-btn[aria-pressed="true"] {
+  border-color: var(--c-primary);
+  background: var(--c-primary-soft);
+  color: var(--c-primary-strong);
+  box-shadow: 0 0 0 1px var(--c-primary) inset;
+}
+.dest-badge {
+  position: absolute;
+  top: -8px; right: -4px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--c-primary);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  line-height: 1.5;
+  box-shadow: 0 1px 3px rgba(16, 40, 28, 0.25);
+}
+
+/* 가까운 시설 목록: 필요한 정보만 작은 꼬리표로 */
+.dest-rank { background: var(--c-primary); }
+.rec-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+.fact {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface-2);
+  color: var(--c-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.6;
+}
+.fact.st-open    { color: #146c2e; background: #e6f4ea; border-color: #b7dfc3; }
+.fact.st-closed  { color: var(--c-error); background: var(--c-error-soft); border-color: #f5c2bd; }
+.fact.st-unknown { color: var(--c-sample); background: var(--c-sample-soft); border-color: #f1d79a; }
+
+/* 날씨 맞춤 길안내 */
+.route-weather {
+  list-style: none;
+  padding: 10px 12px;
+  margin: 4px 0 12px;
+  display: grid;
+  gap: 4px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #fbcfe8;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+.route-weather li { position: relative; padding-left: 22px; }
+.route-weather li::before { content: "🌤️"; position: absolute; left: 0; top: 0; }
+.route-weather.is-hot  li::before { content: "☀️"; }
+.route-weather.is-cold li::before { content: "❄️"; }
+.route-weather.is-rain li::before { content: "☔"; }
+.route-weather.is-hot  { background: #fff7ed; border-color: #fed7aa; }
+.route-weather.is-cold { background: #f0f9ff; border-color: #bae6fd; }
+.route-weather.is-rain { background: #eff6ff; border-color: #bfdbfe; }
+.route-rank.is-weather.is-hot  { background: var(--mk-heat); }
+.route-rank.is-weather.is-cold { background: var(--mk-cold); }
+.route-rank.is-weather.is-rain { background: var(--mk-toilet); }
+.rec-item.is-weather-stop { border-style: dashed; }
+/* 목록에서 지금 길안내 중인 곳 */
+.rec-item[aria-current="true"] { border-color: #db2777; background: #fdf2f8; }
+.rec-item[aria-current="true"] .rec-name::after {
+  content: " · 길안내 중";
+  color: #be185d;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.stop-tag {
+  display: inline-block;
+  margin-left: 2px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  color: var(--c-muted);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  vertical-align: 2px;
+}
+
 /* ---------- 9. 추천 화장실 목록 ---------- */
 .recommend:focus { outline: none; }
 .recommend-title { margin-bottom: 4px; }
@@ -912,7 +1034,7 @@ a { color: var(--c-primary); text-underline-offset: 3px; }
   left: 0; right: 0; bottom: 0;
   z-index: 900;                /* 지도 게임 전체 화면(z-index 3000)보다 아래 */
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   height: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
   background: rgba(255, 255, 255, 0.94);
@@ -950,6 +1072,7 @@ a { color: var(--c-primary); text-underline-offset: 3px; }
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     grid-template-areas:
       "cond prof"
+      "dest dest"
       "map  map"
       "rec  rec";
     gap: 18px;
@@ -958,6 +1081,7 @@ a { color: var(--c-primary); text-underline-offset: 3px; }
   .card { padding: 20px; }
   .map-card { padding: 18px; }
   #filter-bar { margin: 0; padding: 2px 0 4px; flex-wrap: wrap; overflow: visible; }
+  .dest-options { grid-template-columns: repeat(8, minmax(0, 1fr)); }
   #map { height: 520px; max-height: none; }
   .chart-box { height: 280px; }
   .source-list { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; }
@@ -993,10 +1117,11 @@ a { color: var(--c-primary); text-underline-offset: 3px; }
   }
   .workspace {
     grid-template-columns: minmax(340px, 400px) minmax(0, 1fr);
-    grid-template-rows: auto auto 1fr;
+    grid-template-rows: auto auto auto 1fr;
     grid-template-areas:
       "cond map"
       "prof map"
+      "dest map"
       "rec  map";
     gap: 18px 20px;
   }
@@ -1020,7 +1145,9 @@ a { color: var(--c-primary); text-underline-offset: 3px; }
   }
 
   /* 왼쪽 패널은 조금 촘촘하게 */
-  #condition-card, #profile-select, .rec-card { padding: 18px; }
+  #condition-card, #profile-select, #dest-select, .rec-card { padding: 18px; }
+  .dest-options { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .dest-btn { min-height: 66px; }
   .temp .value { font-size: 2.25rem; }
 
   .chart-box { height: 320px; }

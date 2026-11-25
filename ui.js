@@ -10,6 +10,8 @@
    6) 'recommendready' 들으면 → #recommend-list 그리기
    6-2) 'routeready' 들으면 → #recommend-list 맨 위에 '추천 동선(들를 곳 순서)' 그리기 [팀원1 추가]
    7) 추천 목록 항목 누르면 → 'focusplace' 보냄 (detail: { lat, lng })
+   8) '어디 가요?' 버튼 → appState.destination 갱신 → 'destinationchange' 보냄 [팀원1 추가]
+      화장실이 아닌 곳을 고르면 #recommend-list에 window.destList(가까운 순, 필요한 정보만)를 그린다
    ※ 이벤트는 모두 document에서 보내고 듣는다 (팀 약속 7번)
    ===================================================================== */
 
@@ -21,7 +23,8 @@
   window.appState = {
     profiles: [],
     filters: { diaper: false, bell: false, openNow: false, femaleStalls: false },
-    userLocation: null
+    userLocation: null,
+    destination: 'all'   // 가고 싶은 곳 [팀원1 추가]: all | toilet | rest | shop | water | charger | elevator | aed
   };
 
   /* ---------- 2. 프로필 정보 (팀 약속 4번) ---------- */
@@ -42,6 +45,32 @@
     pregnant: ['임신', '임산부'],
     concert: ['공연', '콘서트', '대기', '굿즈']
   };
+
+  // 가고 싶은 곳 [팀원1 추가]
+  var DEST_ORDER = ['all', 'toilet', 'rest', 'shop', 'water', 'charger', 'elevator', 'aed'];
+  var DEST_LABEL = {
+    all: '전체', toilet: '화장실', rest: '쉴 곳(쉼터)', shop: '매점·자판기', water: '음수대',
+    charger: '전동휠체어 충전기', elevator: '지하철 엘리베이터', aed: 'AED(자동심장충격기)'
+  };
+  var DEST_ICON = { all: '🗺️', toilet: '🚻', rest: '🪑', shop: '🛒', water: '🚰', charger: '🔌', elevator: '🛗', aed: '💓' };
+  // 상황별로 '추천' 표시를 붙일 곳
+  var DEST_FOR_PROFILE = {
+    wheelchair: ['toilet', 'charger', 'elevator'],
+    stroller: ['toilet', 'elevator', 'rest'],
+    elderly: ['rest', 'toilet'],
+    pregnant: ['toilet', 'rest'],
+    concert: ['toilet', 'shop', 'water']
+  };
+  var DEST_KEYWORDS = {
+    toilet: ['화장실', '볼일', '소변'],
+    rest: ['쉼터', '쉬고', '쉴곳', '쉴데', '휴식', '앉고'],
+    shop: ['매점', '편의점', '자판기', '음료', '간식', '먹을'],
+    water: ['음수대', '물마', '목말'],
+    charger: ['충전'],
+    elevator: ['엘리베이터', '승강기', '지하철'],
+    aed: ['aed', '심장', '제세동', '쓰러']
+  };
+  var WEATHER_ICON = { hot: '☀️', cold: '❄️', rain: '☔' };
 
   // 도보 속도 (분당 m, 가정값). 여러 개 고르면 가장 느린 속도.
   var SLOW_PROFILES = ['wheelchair', 'stroller', 'elderly', 'pregnant'];
@@ -174,6 +203,7 @@
     updateFemaleButton();
     updateRecommendBasis();
     updateConcertSuggest();
+    updateDestBadges();
     send('profilechange', { profiles: window.appState.profiles.slice() });
   }
 
@@ -203,8 +233,9 @@
     }
 
     var found = findProfilesInText(text);
+    var foundDest = findDestInText(text);
 
-    if (found.length === 0) {
+    if (found.length === 0 && !foundDest) {
       result.textContent = '알아들은 상황이 없어요. 아래에서 직접 골라 주세요.';
       result.classList.add('is-none');
       return;
@@ -220,10 +251,106 @@
     });
 
     var labels = found.map(function (id) { return PROFILE_LABEL[id]; });
-    result.textContent = '이렇게 이해했어요: ' + labels.join(', ');
+    var parts = [];
+    if (labels.length) parts.push(labels.join(', '));
+    if (foundDest) parts.push('가고 싶은 곳: ' + DEST_LABEL[foundDest]);
+    result.textContent = '이렇게 이해했어요: ' + parts.join(' · ');
     result.classList.add('is-ok');
 
     if (changed) applyProfiles();
+    if (foundDest) setDestination(foundDest);
+  }
+
+  /* ---------- 5-2. 가고 싶은 곳 [팀원1 추가] ---------- */
+
+  function findDestInText(text) {
+    var compact = text.replace(/\s+/g, '').toLowerCase();
+    for (var i = 0; i < DEST_ORDER.length; i++) {
+      var id = DEST_ORDER[i];
+      var words = DEST_KEYWORDS[id] || [];
+      for (var j = 0; j < words.length; j++) {
+        if (compact.indexOf(words[j]) > -1) return id;
+      }
+    }
+    return null;
+  }
+
+  function getDestButtons() {
+    return Array.prototype.slice.call(document.querySelectorAll('#dest-select .dest-btn'));
+  }
+
+  function currentDest() {
+    var d = window.appState.destination;
+    return DEST_LABEL[d] ? d : 'all';
+  }
+
+  // 화장실 필터·여성 칸 안내는 '전체' 또는 '화장실'일 때만 필요하다
+  function isToiletView() {
+    var d = currentDest();
+    return d === 'all' || d === 'toilet';
+  }
+
+  function setDestination(dest) {
+    if (!DEST_LABEL[dest]) dest = 'all';
+    window.appState.destination = dest;
+    syncDestUI();
+    send('destinationchange', { destination: dest });
+  }
+
+  function handleDestClick(event) {
+    var btn = event.target.closest('.dest-btn');
+    if (!btn) return;
+    var d = btn.getAttribute('data-dest');
+    // 이미 고른 곳을 다시 누르면 '전체'로 돌아간다
+    setDestination(d === currentDest() && d !== 'all' ? 'all' : d);
+  }
+
+  // 상황에 맞는 곳에 '추천' 표시
+  function updateDestBadges() {
+    var rec = {};
+    window.appState.profiles.forEach(function (p) {
+      (DEST_FOR_PROFILE[p] || []).forEach(function (d) { rec[d] = true; });
+    });
+    getDestButtons().forEach(function (btn) {
+      var d = btn.getAttribute('data-dest');
+      var badge = btn.querySelector('.dest-badge');
+      if (rec[d] && !badge) {
+        badge = document.createElement('span');
+        badge.className = 'dest-badge';
+        badge.textContent = '추천';
+        btn.appendChild(badge);
+      } else if (!rec[d] && badge) {
+        badge.remove();
+      }
+      btn.classList.toggle('is-recommended', !!rec[d]);
+    });
+  }
+
+  var defaultRecTitle = null;
+
+  function syncDestUI() {
+    var d = currentDest();
+    getDestButtons().forEach(function (btn) {
+      btn.setAttribute('aria-pressed', btn.getAttribute('data-dest') === d ? 'true' : 'false');
+    });
+
+    // 화장실과 상관없는 곳이면 화장실 필터를 숨긴다 (필요한 정보만)
+    var bar = document.getElementById('filter-bar');
+    if (bar) bar.hidden = !isToiletView();
+    updateFemaleButton();
+
+    var title = document.getElementById('recommend-title');
+    if (title) {
+      if (defaultRecTitle === null) defaultRecTitle = title.innerHTML;
+      title.innerHTML = isToiletView() ? defaultRecTitle :
+        '<span class="title-icon" aria-hidden="true">' + DEST_ICON[d] + '</span>가까운 ' + esc(DEST_LABEL[d]) +
+        ' <span class="sub">가까운 순</span>';
+    }
+    var hint = $('[data-role="recommend-hint"]');
+    if (hint) hint.hidden = !isToiletView();
+
+    updateRecommendBasis();
+    renderRecommendations();
   }
 
   /* ---------- 6. 필터 버튼 ---------- */
@@ -252,7 +379,7 @@
 
     var concertOn = window.appState.profiles.indexOf('concert') > -1;
     btn.disabled = !concertOn;
-    if (hint) hint.hidden = concertOn;
+    if (hint) hint.hidden = concertOn || !isToiletView();
 
     // 공연 대기를 끄면 여성 칸 기준도 같이 끈다
     if (!concertOn && window.appState.filters.femaleStalls) {
@@ -365,7 +492,8 @@
     if (!el) return;
     var p = window.appState.profiles;
     var who = p.length ? p.map(function (id) { return PROFILE_LABEL[id]; }).join(' · ') : '일반';
-    el.textContent = '기준: ' + who + ' · 걸음 속도 분당 ' + currentSpeed() + 'm 가정';
+    var order = isToiletView() ? '' : ' · 가까운 순(직선거리)';
+    el.textContent = '기준: ' + who + order + ' · 걸음 속도 분당 ' + currentSpeed() + 'm 가정';
   }
 
   // 칸 수 앞에 붙일 말.
@@ -391,6 +519,8 @@
   function renderRecommendations() {
     var body = $('[data-role="recommend-body"]');
     if (!body) return;
+    if (!isToiletView()) { renderDestList(body); return; }
+    if (!Array.isArray(window.recommendations)) return;   // 아직 계산 전이면 '계산 중' 문구를 그대로 둔다
     clearTimeout(recommendTimer);
     updateRecommendBasis();
 
@@ -426,6 +556,7 @@
     });
     html += '</ol>';
     body.innerHTML = html;
+    markGuideTarget();
   }
 
   function handleRecommendClick(event) {
@@ -454,6 +585,59 @@
     body.innerHTML = '<p class="status is-error">추천 목록을 아직 만들지 못했어요. 잠시 후 새로고침해 주세요.</p>';
   }
 
+  /* ---------- 8-1. 가고 싶은 곳 목록 [팀원1 추가] ---------- */
+  // 지금 길안내 중인 목적지를 목록에서 표시 (aria-current)
+  function markGuideTarget() {
+    var plan = window.routePlan;
+    var last = plan && plan.dest && plan.dest !== 'all' && plan.stops && plan.stops.length ? plan.stops[plan.stops.length - 1] : null;
+    var items = document.querySelectorAll('[data-role="recommend-body"] .rec-item');
+    Array.prototype.forEach.call(items, function (btn) {
+      var on = !!last && Number(btn.getAttribute('data-lat')) === Number(last.lat) && Number(btn.getAttribute('data-lng')) === Number(last.lng);
+      if (on) btn.setAttribute('aria-current', 'true');
+      else btn.removeAttribute('aria-current');
+    });
+  }
+
+  // map.js가 window.destList = { dest, label, total, items:[{ name, lat, lng, meters, walkMin, status, facts:[] }] } 를 채운다
+  var STATUS_TEXT = { open: '지금 운영 중', closed: '지금 운영 안 함', unknown: '운영 확인 필요' };
+
+  function renderDestList(body) {
+    var list = window.destList;
+    var d = currentDest();
+    if (!list || list.dest !== d || !Array.isArray(list.items)) {
+      body.innerHTML = '<p class="status is-loading">가까운 ' + esc(DEST_LABEL[d]) + '을(를) 찾는 중이에요…</p>';
+      return;
+    }
+    clearTimeout(recommendTimer);
+    if (!list.items.length) {
+      body.innerHTML = '<div class="rec-empty"><b>가까운 ' + esc(list.label) + ' 정보가 없어요.</b>다른 곳을 골라 보세요.</div>';
+      return;
+    }
+    var html = '<ol class="rec-list dest-list">';
+    list.items.forEach(function (it, i) {
+      var facts = '';
+      if (it.status && STATUS_TEXT[it.status]) facts += '<span class="fact st-' + it.status + '">' + STATUS_TEXT[it.status] + '</span>';
+      (it.facts || []).forEach(function (f) { facts += '<span class="fact">' + esc(f) + '</span>'; });
+      html +=
+        '<li>' +
+          '<button type="button" class="rec-item" data-lat="' + esc(it.lat) + '" data-lng="' + esc(it.lng) + '">' +
+            '<span class="rec-rank dest-rank" aria-label="' + (i + 1) + '번째로 가까움">' + (i + 1) + '</span>' +
+            '<span>' +
+              '<span class="rec-name">' + esc(it.name) + '</span>' +
+              '<span class="rec-meta">도보 약 ' + it.walkMin + '분 · 직선 ' + Number(it.meters).toLocaleString() + 'm</span>' +
+              (facts ? '<span class="rec-facts">' + facts + '</span>' : '') +
+            '</span>' +
+          '</button>' +
+        '</li>';
+    });
+    html += '</ol>';
+    if (list.total > list.items.length) {
+      html += '<p class="hint">가까운 ' + list.items.length + '곳만 보여요. 나머지 ' + (list.total - list.items.length) + '곳은 지도에서 볼 수 있어요.</p>';
+    }
+    body.innerHTML = html;
+    markGuideTarget();
+  }
+
   /* ---------- 8-2. 추천 동선: 들를 곳 순서 [팀원1 추가] ---------- */
   // map.js가 window.routePlan을 채우고 'routeready'를 보낸다. 상황을 안 고르면 routePlan은 null → 숨김.
   // routePlan = { stops:[{step, label, name, lat, lng, legM, legMin}], totalM, totalMin, missing:[], basis }
@@ -479,20 +663,33 @@
     var plan = window.routePlan;
     if (!plan) { box.hidden = true; box.innerHTML = ''; return; }
 
-    var who = plan.profiles.map(function (id) { return PROFILE_LABEL[id]; }).join(' · ');
-    var html = '<h3 class="recommend-title">추천 동선 <span class="sub">' + esc(who) + ' · 들를 곳 순서</span></h3>';
+    var who = plan.profiles.length ? plan.profiles.map(function (id) { return PROFILE_LABEL[id]; }).join(' · ') : '일반';
+    var guide = plan.dest && plan.dest !== 'all';
+    var title = plan.title || '추천 동선';
+    var sub = guide ? who + ' · ' + (DEST_LABEL[plan.dest] || '') + '까지' : who + ' · 들를 곳 순서';
+    var html = '<h3 class="recommend-title">' + (guide ? '<span class="title-icon" aria-hidden="true">🧭</span>' : '') +
+      esc(title) + ' <span class="sub">' + esc(sub) + '</span></h3>';
+
+    // 날씨 때문에 바꾼 점 (날씨 맞춤 길안내)
+    if (plan.weatherNotes && plan.weatherNotes.length) {
+      html += '<ul class="route-weather' + (plan.weatherKind ? ' is-' + plan.weatherKind : '') + '">' +
+        plan.weatherNotes.map(function (n) { return '<li>' + esc(n) + '</li>'; }).join('') + '</ul>';
+    }
 
     if (!plan.stops.length) {
-      html += '<div class="rec-empty"><b>들를 곳을 찾지 못했어요.</b>지도에서 가까운 시설을 직접 확인해 주세요.</div>';
+      html += '<div class="rec-empty"><b>' + (guide ? '갈 곳을 찾지 못했어요.' : '들를 곳을 찾지 못했어요.') + '</b>지도에서 가까운 시설을 직접 확인해 주세요.</div>';
     } else {
       html += '<ol class="rec-list route-steps">';
       plan.stops.forEach(function (s) {
+        var isWx = s.need === 'weather';
+        var icon = isWx ? (WEATHER_ICON[plan.weatherKind] || '') : '';
         html +=
           '<li>' +
-            '<button type="button" class="rec-item" data-lat="' + esc(s.lat) + '" data-lng="' + esc(s.lng) + '">' +
-              '<span class="rec-rank route-rank" aria-label="' + s.step + '번째">' + s.step + '</span>' +
+            '<button type="button" class="rec-item' + (isWx ? ' is-weather-stop' : '') + '" data-lat="' + esc(s.lat) + '" data-lng="' + esc(s.lng) + '">' +
+              '<span class="rec-rank route-rank' + (isWx ? ' is-weather is-' + esc(plan.weatherKind) : '') + '" aria-label="' + s.step + '번째">' + s.step + '</span>' +
               '<span>' +
-                '<span class="rec-name">' + esc(s.label) + '</span>' +
+                '<span class="rec-name">' + (icon ? '<span aria-hidden="true">' + icon + '</span> ' : '') + esc(s.label) +
+                  (isWx ? ' <span class="stop-tag">날씨 경유지</span>' : '') + '</span>' +
                 '<span class="rec-meta">' + esc(s.name) + ' · ' + (s.step === 1 ? '여기서' : '앞 장소에서') +
                   ' 직선 ' + Number(s.legM).toLocaleString() + 'm, 도보 약 ' + s.legMin + '분</span>' +
               '</span>' +
@@ -500,7 +697,12 @@
           '</li>';
       });
       html += '</ol>';
-      html += '<p class="route-total">모두 들르면 직선 ' + Number(plan.totalM).toLocaleString() + 'm · 도보 약 ' + plan.totalMin + '분</p>';
+      html += '<p class="route-total">' + (guide ? '도착까지' : '모두 들르면') + ' 직선 ' + Number(plan.totalM).toLocaleString() + 'm · 도보 약 ' + plan.totalMin + '분</p>';
+    }
+    if (guide && !isToiletView()) {
+      html += '<p class="hint">아래 목록에서 다른 곳을 누르면 그곳으로 길안내를 바꿔요.</p>';
+    } else if (guide) {
+      html += '<p class="hint">아래 추천 화장실 중 다른 곳을 누르면 그곳으로 길안내를 바꿔요.</p>';
     }
     if (plan.missing && plan.missing.length) {
       html += '<p class="hint">동선에서 뺀 곳: ' + esc(plan.missing.join(', ')) + '</p>';
@@ -509,6 +711,7 @@
 
     box.innerHTML = html;
     box.hidden = false;
+    markGuideTarget();
   }
 
   /* ---------- 9. 다른 파일이 보내는 이벤트 듣기 ---------- */
@@ -536,6 +739,9 @@
     var bar = document.getElementById('filter-bar');
     if (bar) bar.addEventListener('click', handleFilterClick);
 
+    var dests = $('#dest-select .dest-options');                 // [팀원1 추가]
+    if (dests) dests.addEventListener('click', handleDestClick);
+
     var rec = document.getElementById('recommend-list');
     if (rec) rec.addEventListener('click', handleRecommendClick);
 
@@ -551,6 +757,7 @@
     syncChipStyle();
     updateFemaleButton();
     updateRecommendBasis();
+    updateDestBadges();                                           // [팀원1 추가]
 
     // 이미 값이 있으면 바로 그리기 (혹시 이벤트가 먼저 지나간 경우 대비)
     if (window.conditionInfo) renderCondition();

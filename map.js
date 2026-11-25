@@ -6,9 +6,11 @@
  * Leaflet 2D → MapLibre GL 3D로 바꿨지만, 팀 약속(프롬프트 4번 계산 규칙, 7번 연결 약속)은 그대로다.
  *  - 읽는 것 : window.appState (ui.js가 만듦), window.conditionInfo (weather.js가 만듦)
  *  - 채우는 것: window.appState.userLocation, window.recommendations
- *  - 듣는 이벤트 : profilechange, filterchange, conditionready, focusplace
+ *  - 듣는 이벤트 : profilechange, filterchange, conditionready, focusplace, destinationchange(추가)
  *  - 보내는 이벤트: recommendready, routeready (실패 시 mapdataerror)
  *  - 채우는 것(추가): window.routePlan — 상황별 '들를 곳 순서'(직선거리 기준). 상황을 안 고르면 null
+ *      가고 싶은 곳(appState.destination)을 고르면 그곳까지의 '길안내'가 되고, 날씨에 맞는 경유지가 들어간다.
+ *  - 채우는 것(추가): window.destList — 가고 싶은 곳이 화장실이 아닐 때 가까운 시설 목록(필요한 정보만)
  *  - 마커 : <div class="mk mk-종류"> (종류: toilet, toilet-accessible, facility, heat, cold, charger, elevator, aed, me)
  *      강조 'mk-highlight', 흐림 'mk-dim' (팀원3 style.css 약속). 아이콘 모양은 style.css의 .mk-종류::before가 그린다.
  *      3D 핀 모양을 위해 바깥에 .mk-wrap(기둥·그림자)을 한 겹 더 씌웠다. 이 겉 칸은 팀원3이 꾸밀 필요 없다.
@@ -312,6 +314,7 @@
     const st = window.appState;
     if (!Array.isArray(st.profiles)) st.profiles = [];
     st.filters = Object.assign({ diaper: false, bell: false, openNow: false, femaleStalls: false }, st.filters || {});
+    if (!st.destination) st.destination = 'all';   // 가고 싶은 곳 (추가). 'all'이면 예전처럼 전부 보여 준다
     return st;
   }
 
@@ -333,6 +336,9 @@
     extrusionLayers: [],
     overlayReady: false,
     compact: false,      // 지도가 좁을 때(휴대폰) true: 안내 접기, 팝업 높이 제한
+    destEntries: [],     // 가고 싶은 곳 목록에 들어간 마커들
+    destTarget: null,    // 목록에서 직접 고른 목적지 ('위도,경도'). 없으면 1순위로 길안내
+    lastDest: 'all',
   };
 
   const ll = (lat, lng) => [lng, lat]; // MapLibre는 [경도, 위도] 순서다(Leaflet과 반대!)
@@ -527,7 +533,7 @@ ${kindVars}
     const layer = S.layers[key];
     if (!layer) return;
     layer.visible = !!visible;
-    layer.entries.forEach((e) => { e.el.style.display = visible ? '' : 'none'; });
+    layer.entries.forEach((e) => { e.el.style.display = entryShown(e) ? '' : 'none'; });
     if (layer.input) layer.input.checked = !!visible;
     if (!visible && S.popupEntry && S.popupEntry.layerKey === key) S.popup.remove();
   }
@@ -989,7 +995,7 @@ ${kindVars}
   function routeCandidates(need, profiles, now, ignoreOpen) {
     const E = S.entries;
     const notClosed = (v) => ignoreOpen || v !== false;
-    const facType = (e) => String(e.item.type || '');
+    const facType = facTypeOf;
     switch (need) {
       case 'toilet': {
         const ok = E.filter((e) => e.cat === 'toilet' && notClosed(toiletOpenNow(e.item, now)) &&
@@ -1001,7 +1007,7 @@ ${kindVars}
       }
       case 'charger': return E.filter((e) => e.cat === 'charger' && notClosed(chargerOpenNow(e.item, now)));
       case 'elevator': return E.filter((e) => e.cat === 'elevator');
-      case 'rest': return E.filter((e) => ((e.cat === 'heat' || e.cat === 'cold') && notClosed(shelterStatus(e, now))) ||
+      case 'rest': return E.filter((e) => ((e.cat === 'heat' || e.cat === 'cold') && notClosed(shelterStatus(e, now)) && !membersOnly(e)) ||
         (e.cat === 'facility' && REST_FACILITY_RE.test(facType(e))));
       case 'nursing': return E.filter((e) => e.cat === 'facility' && NURSING_FACILITY_RE.test(facType(e)));
       case 'shop': return E.filter((e) => e.cat === 'facility' && CONCERT_FACILITY_RE.test(facType(e)));
@@ -1028,7 +1034,9 @@ ${kindVars}
     const st = ensureAppState();
     const profiles = st.profiles || [];
     S.routeEntries = [];
-    if (!profiles.length || !S.origin) return null;
+    if (!S.origin) return null;
+    if (currentDest() !== 'all') return computeGuidance(now);   // 가고 싶은 곳을 골랐으면 그곳까지 길안내
+    if (!profiles.length) return null;
     const needs = [];
     profiles.forEach((p) => (ROUTE_NEEDS[p] || []).forEach((n) => { if (!needs.includes(n)) needs.push(n); }));
     const groups = [];
@@ -1066,19 +1074,300 @@ ${kindVars}
       });
       if (!best || total < best.total) best = { total: total, stops: stops };
     });
-    S.routeEntries = best.stops.map((s) => s.e);
+    // 날씨에 맞는 경유지(물 마실 곳·더위/추위/비 피할 곳)를 덜 돌아가는 자리에 끼워 넣는다
+    const wx = weatherRouteInfo(profiles, now);
+    const path = best.stops.map((s) => ({ e: s.e, need: s.g.need, label: s.g.label }));
+    insertWeatherStop(path, wx);
+    return buildPlan(path, {
+      profiles: profiles, speed: speed, missing: missing, basis: basis,
+      title: '추천 동선', weather: wx,
+    });
+  }
+
+  // 들를 곳 목록(path: [{e, need, label}]) → window.routePlan 형식. 다리 거리는 앞 장소(첫 곳은 기준 위치)에서 잰다
+  function buildPlan(path, o) {
+    let pos = S.origin;
+    let total = 0;
+    const stops = path.map((x, i) => {
+      const d = haversine(pos.lat, pos.lng, x.e.item.lat, x.e.item.lng);
+      total += d;
+      pos = x.e.item;
+      return {
+        step: i + 1, need: x.need, label: x.label, name: entryName(x.e),
+        lat: x.e.item.lat, lng: x.e.item.lng, legM: Math.round(d), legMin: Math.max(1, Math.round(d / o.speed)),
+      };
+    });
+    S.routeEntries = path.map((x) => x.e);
+    const wx = o.weather || {};
     return {
-      profiles: profiles.slice(),
-      stops: best.stops.map((s, i) => ({
-        step: i + 1, need: s.g.need, label: s.g.label, name: entryName(s.e),
-        lat: s.e.item.lat, lng: s.e.item.lng, legM: Math.round(s.d), legMin: Math.max(1, Math.round(s.d / speed)),
-      })),
-      totalM: Math.round(best.total),
-      totalMin: Math.max(1, Math.round(best.total / speed)),
-      speed: speed,
-      missing: missing,   // 들르지 못해 뺀 곳. 예: '전동휠체어 충전기 (지금 운영 안 함)'
-      basis: basis,
+      profiles: o.profiles.slice(),
+      title: o.title,                 // '추천 동선' 또는 '길안내' (ui.js가 제목으로 씀)
+      dest: o.dest || 'all',
+      stops: stops,
+      totalM: Math.round(total),
+      totalMin: Math.max(1, Math.round(total / o.speed)),
+      speed: o.speed,
+      missing: o.missing,   // 들르지 못해 뺀 곳. 예: '전동휠체어 충전기 (지금 운영 안 함)'
+      basis: o.basis,
+      weatherKind: wx.kind || null,   // 'hot' | 'cold' | 'rain' | null
+      weatherNotes: wx.notes || [],   // 날씨 때문에 바꾼 점·주의할 점
     };
+  }
+
+  // ───────────────────── 10-3. 가고 싶은 곳 + 날씨 맞춤 길안내 [팀원1 추가] ─────────────────────
+  // 1) 상황을 고른 뒤 '어디 가요?'에서 시설 종류를 고르면, 지도에는 그 종류만 남기고
+  //    목록에는 가까운 순으로 필요한 정보만 보여 준다(window.destList). 화장실은 원래 추천 목록을 그대로 쓴다.
+  // 2) 1순위(또는 목록에서 누른 곳)까지 길안내(window.routePlan)를 만든다.
+  // 3) 날씨에 따라 가는 길에 들를 곳을 하나 넣는다(덜 돌아가는 곳만). 모두 직선거리 기준이다.
+  //    - 비: 비 피할 실내 시설  - 체감 33° 이상: 음수대·무더위쉼터·실내 매점  - 체감 0° 이하: 한파쉼터·실내 매점
+  //    - 자외선 6 이상: 경유지를 늘리지 않고 짧은 길을 쓴다(그늘 정보는 데이터에 없음)
+  const INDOOR_SHOP_RE = /편의점|매점|식음|카페|스낵/;
+  const WATER_RE = /음수/;
+  const DEST_LIST_MAX = 5;
+  const WEATHER_ROUTE = {
+    hotFeelsLike: 33,       // rules.json의 더위 기준과 같게
+    coldFeelsLike: 0,       // rules.json의 추위 기준과 같게
+    uvHigh: 6,              // rules.json의 자외선 기준과 같게
+    maxDetourM: 400,        // 경유지 때문에 더 걷는 거리 최대(가정값)
+    minDetourM: 150,        // 가까운 목적지라도 이만큼은 돌아가도 된다고 본다(가정값)
+    detourRatio: 0.6,       // 원래 거리의 60%까지 더 걸어도 된다고 본다(가정값)
+  };
+
+  function facTypeOf(e) { return String((e.item && e.item.type) || ''); }
+
+  const DESTS = {
+    toilet: { label: '화장실', match: (e) => e.cat === 'toilet' },
+    rest: { label: '쉴 곳(쉼터)', match: (e) => restKinds().includes(e.cat) },
+    shop: { label: '매점·자판기', match: (e) => e.cat === 'facility' && CONCERT_FACILITY_RE.test(facTypeOf(e)) },
+    water: { label: '음수대', match: (e) => e.cat === 'facility' && WATER_RE.test(facTypeOf(e)) },
+    charger: { label: '전동휠체어 충전기', match: (e) => e.cat === 'charger' },
+    elevator: { label: '지하철 엘리베이터', match: (e) => e.cat === 'elevator' },
+    aed: { label: 'AED(자동심장충격기)', match: (e) => e.cat === 'aed' },
+  };
+
+  // 한파쉼터 중 '특정인'(회원만) 이용하는 곳
+  function membersOnly(e) { return e.cat === 'cold' && /특정/.test(String(e.item.who || '')); }
+
+  // '쉴 곳'에서 보여 줄 쉼터: 더운 날은 무더위쉼터, 추운 날은 한파쉼터, 그 사이면 둘 다
+  function restKinds() {
+    const w = (window.conditionInfo || {}).weather || {};
+    const fl = num(w.feelsLike);
+    if (fl !== null && fl >= 25) return ['heat'];
+    if (fl !== null && fl <= 10) return ['cold'];
+    return ['heat', 'cold'];
+  }
+
+  function currentDest() {
+    const d = ensureAppState().destination;
+    return DESTS[d] ? d : 'all';
+  }
+
+  // 지도에 보일지: 레이어가 켜져 있고, 가고 싶은 곳 종류이거나 길안내에 들어간 곳
+  function entryShown(e) {
+    const layer = S.layers[e.layerKey];
+    if (!layer || !layer.visible) return false;
+    const d = currentDest();
+    if (d === 'all') return true;
+    return DESTS[d].match(e) || (S.routeEntries || []).includes(e);
+  }
+
+  function applyVisibility() {
+    S.entries.forEach((e) => {
+      const show = entryShown(e);
+      const disp = show ? '' : 'none';
+      if (e.el.style.display !== disp) e.el.style.display = disp;
+      if (!show && S.popupEntry === e && S.popup && S.popup.isOpen()) S.popup.remove();
+    });
+  }
+
+  // 가고 싶은 곳을 새로 골랐을 때: 그 종류가 든 레이어를 켜고(쉼터·AED는 처음에 꺼져 있음) 직접 고른 목적지는 지운다
+  function onDestinationChange() {
+    const d = currentDest();
+    if (d !== S.lastDest) S.destTarget = null;
+    S.lastDest = d;
+    if (d !== 'all') {
+      Object.keys(S.layers).forEach((k) => {
+        if (S.layers[k].entries.some((e) => DESTS[d].match(e))) showLayer(k);
+      });
+    }
+    recompute();
+  }
+
+  // true(운영 중) / false(운영 안 함) / null(모름) / undefined(운영시간이 없는 종류)
+  function entryOpenStatus(e, now) {
+    switch (e.cat) {
+      case 'toilet': return toiletOpenNow(e.item, now);
+      case 'heat': case 'cold': return shelterStatus(e, now);
+      case 'charger': return chargerOpenNow(e.item, now);
+      default: return undefined;
+    }
+  }
+
+  // 목록에 보여 줄 '필요한 정보'만 짧게
+  function destFacts(e, now) {
+    const it = e.item;
+    const f = [];
+    const add = (v) => { if (v !== null && v !== undefined && String(v).trim()) f.push(String(v).trim()); };
+    switch (e.cat) {
+      case 'heat':
+        add('무더위쉼터' + (it.facility ? ' · ' + it.facility : ''));
+        add([it.days, hoursToText(it.hours)].filter(Boolean).join(' '));
+        break;
+      case 'cold':
+        add('한파쉼터' + (it.facility ? ' · ' + it.facility : ''));
+        if (it.who) add(/누구나/.test(it.who) ? '누구나 이용' : '이용 대상: ' + it.who);
+        if (/경보/.test(String(it.note || ''))) add('한파 경보 때만 운영');
+        break;
+      case 'charger':
+        add(it.detail);
+        add((isHolidayLike(now) ? '오늘(휴일) ' + hoursToText(it.holiday) : '오늘(평일) ' + hoursToText(it.weekday)));
+        if (num(it.slots) !== null) add('동시 ' + num(it.slots) + '대');
+        break;
+      case 'elevator':
+        add((it.station || '지하철역') + ' 엘리베이터');
+        break;
+      case 'aed':
+        add(it.detail);
+        break;
+      default:
+        add(it.type);
+        add(it.detail);
+    }
+    const pd = num(it.dist_from_park_m);
+    if (pd !== null && pd > OUTSIDE_PARK_M / 3) add('공원 밖 약 ' + Math.round(pd).toLocaleString() + 'm');
+    return f;
+  }
+
+  // 화장실이 아닌 곳: 가까운 순(운영 안 하는 곳은 뒤로) 최대 5곳
+  function computeDestList(now) {
+    const d = currentDest();
+    S.destEntries = [];
+    if (d === 'all') return null;
+    const st = ensureAppState();
+    if (d === 'toilet') {
+      const keys = new Set((window.recommendations || []).map((r) => r.lat + ',' + r.lng));
+      S.destEntries = S.entries.filter((e) => e.cat === 'toilet' && keys.has(e.item.lat + ',' + e.item.lng));
+      return { dest: d, label: DESTS[d].label, items: null };  // 목록은 ui.js가 window.recommendations로 그린다
+    }
+    const rows = S.entries.filter((e) => DESTS[d].match(e)).map((e) => {
+      const m = haversine(S.origin.lat, S.origin.lng, e.item.lat, e.item.lng);
+      return { e: e, m: m, status: entryOpenStatus(e, now) };
+    });
+    // 운영 안 하는 곳, 회원만 이용하는 쉼터는 뒤로
+    const later = (r) => (r.status === false ? 2 : 0) + (membersOnly(r.e) ? 1 : 0);
+    rows.sort((a, b) => later(a) - later(b) || a.m - b.m);
+    const top = rows.slice(0, DEST_LIST_MAX);
+    S.destEntries = top.map((r) => r.e);
+    return {
+      dest: d,
+      label: DESTS[d].label,
+      total: rows.length,
+      items: top.map((r) => ({
+        name: entryName(r.e),
+        lat: r.e.item.lat,
+        lng: r.e.item.lng,
+        meters: Math.round(r.m),
+        walkMin: Math.max(1, Math.round(walkMinutes(r.m, st.profiles))),
+        status: r.status === true ? 'open' : r.status === false ? 'closed' : r.status === null ? 'unknown' : null,
+        facts: destFacts(r.e, now),
+      })),
+    };
+  }
+
+  // 오늘 날씨에 맞는 경유지 후보와 안내 문구
+  function weatherRouteInfo(profiles, now) {
+    const ci = window.conditionInfo || {};
+    const w = ci.weather || {};
+    const fl = num(w.feelsLike);
+    const uv = num(w.uv);
+    const rain = w.rain === true;
+    const notOff = (e) => entryOpenStatus(e, now) !== false;
+    const isShop = (e) => e.cat === 'facility' && INDOOR_SHOP_RE.test(facTypeOf(e));
+    const info = { kind: null, cands: [], labelOf: null, notes: [] };
+    if (!ci.weather) return info;
+    if (rain) {
+      info.kind = 'rain';
+      info.cands = S.entries.filter((e) => isShop(e) || ((e.cat === 'heat' || e.cat === 'cold') && notOff(e) && !membersOnly(e)));
+      info.labelOf = (e) => (isShop(e) ? '비 피할 곳(매점)' : '비 피할 곳(쉼터 건물)');
+      info.notes.push('비 소식이 있어요. 가는 길에 잠깐 비를 피할 수 있는 매점·쉼터를 넣었어요.');
+      if (profiles.some((p) => p === 'wheelchair' || p === 'stroller')) info.notes.push('젖은 경사로·내리막은 미끄러울 수 있어요. 천천히 이동하세요.');
+    } else if (fl !== null && fl >= WEATHER_ROUTE.hotFeelsLike) {
+      info.kind = 'hot';
+      info.cands = S.entries.filter((e) => (e.cat === 'facility' && WATER_RE.test(facTypeOf(e))) || isShop(e) ||
+        (e.cat === 'heat' && notOff(e)));
+      info.labelOf = (e) => (WATER_RE.test(facTypeOf(e)) ? '물 마실 곳(음수대)' :
+        e.cat === 'heat' ? '더위 피할 곳(무더위쉼터)' : '시원한 음료 살 곳(매점)');
+      info.notes.push('체감 ' + Math.round(fl) + '°로 더워요. 가는 길에 물 마시거나 더위를 피할 곳을 넣었어요.');
+    } else if (fl !== null && fl <= WEATHER_ROUTE.coldFeelsLike) {
+      info.kind = 'cold';
+      info.cands = S.entries.filter((e) => isShop(e) || (e.cat === 'cold' && !membersOnly(e)));
+      info.labelOf = (e) => (e.cat === 'cold' ? '몸 녹일 곳(한파쉼터)' : '따뜻한 음료 살 곳(매점)');
+      info.notes.push('체감 ' + Math.round(fl) + '°로 추워요. 가는 길에 몸을 녹이거나 따뜻한 음료를 살 곳을 넣었어요.');
+    }
+    if (!rain && uv !== null && uv >= WEATHER_ROUTE.uvHigh) {
+      info.notes.push('자외선이 강해요(지수 ' + uv + '). 햇빛 아래 오래 걷지 않게 덜 돌아가는 길로 골랐어요. 그늘 정보는 데이터에 없어요.');
+    }
+    if (!info.kind && !info.notes.length) {
+      const parts = [];
+      if (fl !== null) parts.push('체감 ' + Math.round(fl) + '°');
+      parts.push('비 소식 없음');
+      info.notes.push('오늘 날씨(' + parts.join(', ') + ')로는 따로 들를 곳이 없어요.');
+    }
+    return info;
+  }
+
+  // 경유지 하나를 '덜 돌아가는 자리'에 넣는다. 너무 많이 돌아가야 하면 넣지 않고 안내만 남긴다
+  function insertWeatherStop(path, wx) {
+    if (!wx.kind || !path.length) return;
+    const used = new Set(path.map((x) => x.e));
+    const pts = [S.origin].concat(path.map((x) => x.e.item));
+    let best = null;
+    wx.cands.forEach((e) => {
+      if (used.has(e)) return;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const a = pts[i];
+        const b = pts[i + 1];
+        const direct = haversine(a.lat, a.lng, b.lat, b.lng);
+        const extra = haversine(a.lat, a.lng, e.item.lat, e.item.lng) + haversine(e.item.lat, e.item.lng, b.lat, b.lng) - direct;
+        const limit = Math.min(WEATHER_ROUTE.maxDetourM, Math.max(WEATHER_ROUTE.minDetourM, direct * WEATHER_ROUTE.detourRatio));
+        if (extra <= limit && (!best || extra < best.extra)) best = { e: e, at: i, extra: extra };
+      }
+    });
+    if (!best) {
+      wx.notes.push('가는 길 가까이에 들를 만한 곳이 없어 경유지는 넣지 않았어요.');
+      return;
+    }
+    path.splice(best.at, 0, { e: best.e, need: 'weather', label: wx.labelOf(best.e) });
+    if (best.extra >= 30) wx.notes.push('경유지 때문에 직선으로 약 ' + Math.round(best.extra).toLocaleString() + 'm 더 걸어요.');
+  }
+
+  // 가고 싶은 곳까지 길안내: 목록에서 누른 곳, 없으면 1순위
+  function computeGuidance(now) {
+    const st = ensureAppState();
+    const profiles = st.profiles || [];
+    const d = currentDest();
+    const speed = walkSpeed(profiles);
+    const basis = '직선거리 기준 · 분당 ' + speed + 'm 가정 · 실제 길은 더 멀거나 계단이 있을 수 있어요';
+    const key = (e) => e.item.lat + ',' + e.item.lng;
+    const pool = S.destEntries || [];
+    let target = S.destTarget ? pool.find((e) => key(e) === S.destTarget) : null;
+    if (!target && d === 'toilet') {
+      const r0 = (window.recommendations || [])[0];
+      if (r0) target = pool.find((e) => key(e) === r0.lat + ',' + r0.lng) || null;
+    }
+    if (!target) target = pool.find((e) => entryOpenStatus(e, now) !== false && !membersOnly(e)) ||
+      pool.find((e) => entryOpenStatus(e, now) !== false) || null;
+    const label = d === 'toilet' ? toiletNeedLabel(profiles) : DESTS[d].label;
+    const wx = weatherRouteInfo(profiles, now);
+    if (!target) {
+      return buildPlan([], {
+        profiles: profiles, speed: speed, basis: basis, title: '길안내', dest: d, weather: { kind: null, notes: [] },
+        missing: [label + (pool.length ? ' (지금 운영 안 함)' : ' (조건에 맞는 곳 없음)')],
+      });
+    }
+    const path = [{ e: target, need: 'dest', label: label }];
+    insertWeatherStop(path, wx);
+    return buildPlan(path, { profiles: profiles, speed: speed, missing: [], basis: basis, title: '길안내', dest: d, weather: wx });
   }
 
   // ───────────────────── 11. 추천 + 강조 다시 계산 ─────────────────────
@@ -1089,8 +1378,11 @@ ${kindVars}
 
     // (1) 화장실 추천
     window.recommendations = computeRecommendations(S.data.toilets, S.origin, st.profiles, st.filters, now);
-    // (1-2) 추천 동선(들를 곳 순서). 상황을 안 고르면 null
+    // (1-1) 가고 싶은 곳 목록 (화장실이 아니면 가까운 순, 필요한 정보만)
+    window.destList = computeDestList(now);
+    // (1-2) 추천 동선(들를 곳 순서) 또는 가고 싶은 곳까지 길안내. 상황도 목적지도 없으면 null
     window.routePlan = computeRoutePlan(now);
+    applyVisibility();
     document.dispatchEvent(new CustomEvent('recommendready', { detail: { recommendations: window.recommendations } }));
     document.dispatchEvent(new CustomEvent('routeready', { detail: { routePlan: window.routePlan } }));
 
@@ -1166,9 +1458,13 @@ ${kindVars}
     });
     setNotice('shelter', shelterMsgs.join(' '), shelterMsgs.some((m) => m.includes('확인되지')) ? 'warn' : 'info');
 
+    // 가고 싶은 곳을 골랐으면: 목록에 든 곳과 길안내 경유지만 강조하고 같은 종류의 나머지는 흐리게
+    const destMode = currentDest() !== 'all';
+    const hiSet = destMode ? new Set((S.destEntries || []).concat(S.routeEntries || [])) : hi;
+
     // 아이콘 클래스 적용: 강조 'mk-highlight', 프로필이 있을 때 나머지는 'mk-dim' (팀원3 style.css 약속)
     S.entries.forEach((e) => {
-      const state = hi.has(e) ? 'mk-highlight' : profiles.length ? 'mk-dim' : '';
+      const state = hiSet.has(e) ? 'mk-highlight' : (profiles.length || destMode) ? 'mk-dim' : '';
       if (state !== e.iconState) {
         e.iconState = state;
         setPinState(e, state);
@@ -1316,7 +1612,9 @@ ${kindVars}
       geometry: { type: 'LineString', coordinates: [ll(S.origin.lat, S.origin.lng)].concat(plan.stops.map((x) => ll(x.lat, x.lng))) },
     } : emptyFC());
     // 동선이 있으면 화장실 연결선은 숨겨 지도를 덜 복잡하게
-    ['op-rec-casing', 'op-rec-line'].forEach((id) => S.map.setLayoutProperty(id, 'visibility', hasRoute ? 'none' : 'visible'));
+    const dNow = currentDest();
+    const hideRecLines = hasRoute || (dNow !== 'all' && dNow !== 'toilet');
+    ['op-rec-casing', 'op-rec-line'].forEach((id) => S.map.setLayoutProperty(id, 'visibility', hideRecLines ? 'none' : 'visible'));
     // 들를 곳이 바뀌었을 때만, 기준 위치와 들를 곳이 모두 보이게 지도를 맞춘다
     const routeKey = hasRoute ? plan.stops.map((x) => x.lat + ',' + x.lng).join('|') : '';
     if (hasRoute && routeKey !== S.lastRouteKey) {
@@ -1339,6 +1637,21 @@ ${kindVars}
   }
 
   // ───────────────────── 13. 추천 목록 클릭 → 지도 이동 ─────────────────────
+  // 가고 싶은 곳을 고른 상태에서 목록의 다른 곳을 누르면, 그곳을 목적지로 길안내를 다시 만든다
+  function onFocusPlace(lat, lng) {
+    const d = currentDest();
+    const k = Number(lat) + ',' + Number(lng);
+    const target = d !== 'all' ? (S.destEntries || []).find((e) => e.item.lat + ',' + e.item.lng === k) : null;
+    const curTarget = (S.routeEntries || []).slice(-1)[0];
+    if (target && target !== curTarget) {
+      S.destTarget = k;
+      recompute();                       // 새 길안내에 맞게 지도를 맞춘다(fitBounds)
+      openEntryPopup(target, true);
+      return;
+    }
+    focusPlace(lat, lng);
+  }
+
   function focusPlace(lat, lng) {
     lat = Number(lat);
     lng = Number(lng);
@@ -1461,8 +1774,10 @@ ${kindVars}
     // 이벤트는 데이터가 오기 전에도 받아 두고, 데이터가 오면 계산한다
     document.addEventListener('profilechange', recompute);
     document.addEventListener('filterchange', recompute);
-    document.addEventListener('conditionready', () => refreshEmphasis(new Date()));
-    document.addEventListener('focusplace', (e) => { const d = (e && e.detail) || {}; if (S.data) focusPlace(d.lat, d.lng); });
+    // 날씨가 오면 길안내 경유지도 바뀌므로 전부 다시 계산한다(데이터 전이면 recompute가 그냥 돌아간다)
+    document.addEventListener('conditionready', () => { if (S.data && S.origin) recompute(); });
+    document.addEventListener('destinationchange', () => { if (S.data && S.origin) onDestinationChange(); });
+    document.addEventListener('focusplace', (e) => { const d = (e && e.detail) || {}; if (S.data) onFocusPlace(d.lat, d.lng); });
 
     const dataPromise = loadData().then((d) => ({ ok: true, d: d }), (err) => ({ ok: false, err: err }));
     const picked = await pickStyle();

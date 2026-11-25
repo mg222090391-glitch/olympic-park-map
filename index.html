@@ -32,7 +32,8 @@
       </div>
       <ol class="how-to">
         <li><span class="how-num" aria-hidden="true">1</span><span><b>내 상황</b>을 고르거나 문장으로 적어 주세요.</span></li>
-        <li><span class="how-num" aria-hidden="true">2</span><span><b>지도</b>와 <b>추천 목록</b>에서 가까운 편의시설을 확인하세요.</span></li>
+        <li><span class="how-num" aria-hidden="true">2</span><span><b>가고 싶은 곳</b>을 고르세요.</span></li>
+        <li><span class="how-num" aria-hidden="true">3</span><span><b>지도</b>와 <b>날씨 맞춤 길안내</b>를 확인하세요.</span></li>
       </ol>
     </div>
   </header>
@@ -99,10 +100,26 @@
       <p class="hint">아무것도 고르지 않으면 ‘일반’ 기준으로 안내해요.</p>
     </section>
 
+    <!-- ===== 2-2. 가고 싶은 곳 (ui.js가 버튼 연결, map.js가 목록·길안내 계산) [팀원1 추가] ===== -->
+    <section id="dest-select" class="card" aria-labelledby="dest-title">
+      <h2 id="dest-title" class="card-title"><span class="step-num" aria-hidden="true">2</span>어디 가요? <span class="sub">(하나만 선택)</span></h2>
+      <div class="dest-options" role="group" aria-label="가고 싶은 곳 고르기">
+        <button type="button" class="dest-btn" data-dest="all" aria-pressed="true"><span class="dest-icon" aria-hidden="true">🗺️</span><span class="dest-text">전체 보기</span></button>
+        <button type="button" class="dest-btn" data-dest="toilet" aria-pressed="false"><span class="dest-icon" aria-hidden="true">🚻</span><span class="dest-text">화장실</span></button>
+        <button type="button" class="dest-btn" data-dest="rest" aria-pressed="false"><span class="dest-icon" aria-hidden="true">🪑</span><span class="dest-text">쉴 곳</span></button>
+        <button type="button" class="dest-btn" data-dest="shop" aria-pressed="false"><span class="dest-icon" aria-hidden="true">🛒</span><span class="dest-text">매점·자판기</span></button>
+        <button type="button" class="dest-btn" data-dest="water" aria-pressed="false"><span class="dest-icon" aria-hidden="true">🚰</span><span class="dest-text">음수대</span></button>
+        <button type="button" class="dest-btn" data-dest="charger" aria-pressed="false"><span class="dest-icon" aria-hidden="true">🔌</span><span class="dest-text">휠체어 충전</span></button>
+        <button type="button" class="dest-btn" data-dest="elevator" aria-pressed="false"><span class="dest-icon" aria-hidden="true">🛗</span><span class="dest-text">지하철 엘리베이터</span></button>
+        <button type="button" class="dest-btn" data-dest="aed" aria-pressed="false"><span class="dest-icon" aria-hidden="true">💓</span><span class="dest-text">AED</span></button>
+      </div>
+      <p class="hint">내 상황에 맞는 곳에는 <b>추천</b> 표시가 붙어요. 고르면 지도와 목록에 그곳만 남고, 날씨에 맞춰 길안내해요.</p>
+    </section>
+
     <!-- ===== 3~4. 필터 바 + 지도 (컴퓨터: 오른쪽에 크게 고정 / 휴대폰: 상황 선택 아래) ===== -->
     <section id="map-section" class="card map-card" aria-labelledby="map-title">
       <div class="map-card-head">
-        <h2 id="map-title" class="card-title"><span class="step-num" aria-hidden="true">2</span>편의시설 지도</h2>
+        <h2 id="map-title" class="card-title"><span class="step-num" aria-hidden="true">3</span>편의시설 지도</h2>
 
         <!-- 3. 필터 바 -->
         <div id="filter-bar" role="group" aria-label="화장실 거르기">
@@ -151,7 +168,7 @@
         <div data-role="recommend-body" aria-live="polite">
           <p class="status is-loading">추천을 계산하는 중이에요…</p>
         </div>
-        <p class="hint">거리 대비 칸 수가 많은 곳을 먼저 보여줘요. 거리는 직선거리라 실제 길은 더 멀 수 있고, 도보 시간은 가정한 걸음 속도로 계산한 값이에요.</p>
+        <p class="hint" data-role="recommend-hint">거리 대비 칸 수가 많은 곳을 먼저 보여줘요. 거리는 직선거리라 실제 길은 더 멀 수 있고, 도보 시간은 가정한 걸음 속도로 계산한 값이에요.</p>
       </div>
     </section>
 
@@ -219,6 +236,7 @@
   <!-- ===== 휴대폰 아래쪽 바로가기 (컴퓨터 화면에서는 숨김) ===== -->
   <nav class="bottom-nav" aria-label="바로가기">
     <a href="#profile-select"><span aria-hidden="true">🙋</span>내 상황</a>
+    <a href="#dest-select"><span aria-hidden="true">📍</span>어디 가요</a>
     <a href="#map-section"><span aria-hidden="true">🗺️</span>지도</a>
     <a href="#recommend-list"><span aria-hidden="true">🚻</span>추천</a>
     <a href="#parking-section"><span aria-hidden="true">🅿️</span>주차</a>

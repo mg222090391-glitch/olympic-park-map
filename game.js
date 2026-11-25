@@ -6,13 +6,20 @@
  *  - map.js가 지도와 시설 데이터를 다 준비한 뒤 이 파일을 불러온다(index.html 수정 필요 없음).
  *  - 쓰는 것: window.mapUtils.getMap(), window.routePlan, window.recommendations, window.appState
  *  - 길은 '직선' 기준이다(팀 결정). 화면에 "실제 길·계단은 현장 안내를 따라 주세요"를 늘 보여준다.
- *  - 게임 속 걷는 속도는 빠르게(초당 GAME_SPEED_MS m) 했고, 실제 예상 도보 시간은 따로 보여준다.
+ *  - 게임 속 걷는 속도는 빠르게 했고, 실제 예상 도보 시간은 따로 보여준다.
+ *  - 시점: 1인칭(기본, 눈높이) ↔ 3인칭(뒤에서 보기). V 키나 화면의 👁 버튼으로 바꾼다.
+ *    1인칭에서는 world3d.js가 나무·벤치·가로등·걸어 다니는 사람을 세운다(three.js).
  * ===================================================================== */
 (function () {
   'use strict';
 
   // ───────────────────── 1. 설정값 ─────────────────────
-  const GAME_SPEED_MS = 22;      // 게임 속 이동 속도(m/초). 실제 걸음보다 약 20배 빠르다
+  const GAME_SPEED_MS = 22;      // 3인칭 이동 속도(m/초). 실제 걸음보다 약 20배 빠르다
+  const FP_SPEED_MS = 6;         // 1인칭 걷는 속도(m/초). 달리기(Shift·🏃)는 RUN_X배
+  const RUN_X = 2.5;
+  const FP_PITCH = 84;           // 1인칭에서 고개 각도(90이면 수평)
+  const FP_FOV = 62;             // 1인칭 시야각(도)
+  const EYE_M = { wheelchair: 1.2, default: 1.6 }; // 눈높이(m)
   const TURN_DEG_S = 130;        // 좌우로 도는 속도(도/초)
   const ARRIVE_M = 18;           // 목적지에서 이 거리 안이면 '도착'
   const MAX_FROM_PARK_M = 1600;  // 공원 중심에서 이보다 멀리 못 가게
@@ -26,6 +33,7 @@
     pos: null, heading: 0, keys: new Set(),
     targets: [], idx: 0, avatar: null, beacon: null,
     startedAt: 0, saved: null, btn: null, hud: null, pad: null,
+    view: 'fp', run: false,
   };
 
   // ───────────────────── 2. 작은 도구 ─────────────────────
@@ -104,6 +112,12 @@
 :where(.gm-beacon .ring){position:absolute;left:50%;bottom:0;width:56px;height:20px;margin-left:-28px;border-radius:50%;border:3px solid ${COLOR};animation:gm-ring 1.6s ease-out infinite}
 :where(.gm-beacon .num){position:absolute;left:50%;bottom:40px;transform:translateX(-50%);min-width:30px;height:30px;padding:0 6px;border-radius:15px;background:${COLOR};color:#fff;
   display:grid;place-items:center;font:800 15px system-ui,sans-serif;border:2px solid #fff;box-shadow:0 4px 10px rgba(0,0,0,.3)}
+#map.is-fp .mk-wrap:not(.is-step), #map.is-fp .gm-avatar-wrap{display:none}
+:where(.gm-tools){display:flex;gap:6px;margin-top:6px}
+:where(.gm-tools button){pointer-events:auto;border:0;border-radius:999px;padding:5px 10px;background:rgba(255,255,255,.16);color:#fff;font:700 12px system-ui,sans-serif;cursor:pointer}
+:where(.gm-tools button.is-on){background:${COLOR}}
+:where(.gm-pad .gm-run){font-size:20px}
+:where(.gm-loading){position:absolute;z-index:7;left:50%;bottom:110px;transform:translateX(-50%);background:rgba(17,24,39,.86);color:#fff;border-radius:999px;padding:7px 14px;font:700 12px system-ui,sans-serif}
 @keyframes gm-walk{from{translate:0 0}to{translate:0 -5px}}
 @keyframes gm-beam{0%,100%{opacity:.6}50%{opacity:1}}
 @keyframes gm-ring{0%{transform:scale(.5);opacity:1}100%{transform:scale(1.4);opacity:0}}
@@ -144,20 +158,31 @@
     hud.innerHTML =
       '<div class="gm-card" role="status" aria-live="polite">' +
         '<div class="gm-step"></div><div class="gm-goal"></div><div class="gm-dots"></div>' +
+        '<div class="gm-tools"><button type="button" class="gm-view"></button><button type="button" class="gm-runbtn">🏃 달리기</button></div>' +
         '<div class="gm-warn">직선 안내예요. 실제 길·계단은 현장 안내를 따라 주세요.</div>' +
       '</div>' +
       '<div class="gm-compass" aria-hidden="true"><div class="gm-arrow"></div><div class="gm-dist"></div></div>' +
       '<button type="button" class="gm-exit" aria-label="찾아가기 그만하기">✕</button>';
     hud.querySelector('.gm-exit').addEventListener('click', () => stop());
+    hud.querySelector('.gm-view').addEventListener('click', () => setView(G.view === 'fp' ? '3p' : 'fp'));
+    hud.querySelector('.gm-runbtn').addEventListener('click', () => setRun(!G.run));
     container.appendChild(hud);
 
-    const help = el('div', 'gm-help', '⬆ 앞으로 · ⬇ 뒤로 · ⬅➡ 돌기<br>키보드: 방향키 또는 W A S D');
+    const help = el('div', 'gm-help', '⬆ 앞으로 · ⬇ 뒤로 · ⬅➡ 돌기<br>방향키·W A S D · Shift 달리기 · V 시점 바꾸기');
     container.appendChild(help);
 
     const pad = el('div', 'gm-pad');
-    const btns = [['', ''], ['up', '▲'], ['', ''], ['left', '◀'], ['', ''], ['right', '▶'], ['', ''], ['down', '▼'], ['', '']];
+    const btns = [['', ''], ['up', '▲'], ['', ''], ['left', '◀'], ['run', ''], ['right', '▶'], ['', ''], ['down', '▼'], ['', '']];
     btns.forEach(([k, t]) => {
       if (!k) { pad.appendChild(el('span')); return; }
+      if (k === 'run') {
+        const r = el('button', 'gm-run', '🏃');
+        r.type = 'button';
+        r.setAttribute('aria-label', '달리기 켜고 끄기');
+        r.addEventListener('click', () => setRun(!G.run));
+        pad.appendChild(r);
+        return;
+      }
       const b = el('button', '', t);
       b.type = 'button';
       b.setAttribute('aria-label', { up: '앞으로', down: '뒤로', left: '왼쪽으로 돌기', right: '오른쪽으로 돌기' }[k]);
@@ -202,6 +227,81 @@
     G.beacon.getElement().querySelector('.num').textContent = G.idx + 1;
   }
 
+  // ───────────────────── 5-2. 시점(1인칭/3인칭)·달리기 ─────────────────────
+  function eyeHeight() {
+    const p = (window.appState && window.appState.profiles) || [];
+    return p.includes('wheelchair') ? EYE_M.wheelchair : EYE_M.default;
+  }
+
+  function setRun(on) {
+    G.run = !!on;
+    if (G.hud) G.hud.querySelector('.gm-runbtn').classList.toggle('is-on', G.run);
+    if (G.pad) { const r = G.pad.querySelector('.gm-run'); if (r) r.classList.toggle('is-down', G.run); }
+  }
+
+  let worldLoading = null;
+  function ensureWorld() {
+    if (window.World3D) return Promise.resolve();
+    if (!worldLoading) {
+      worldLoading = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'world3d.js';
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('world3d.js를 못 불러옴'));
+        document.head.appendChild(s);
+      });
+    }
+    return worldLoading;
+  }
+
+  function setView(view) {
+    G.view = view;
+    const map = G.map;
+    const box = map.getContainer();
+    box.classList.toggle('is-fp', view === 'fp');
+    if (G.hud) G.hud.querySelector('.gm-view').textContent = view === 'fp' ? '🎥 3인칭으로' : '👁 1인칭으로';
+    if (view === 'fp') {
+      map.setMaxPitch(85);
+      map.setMaxZoom(24);
+      if (map.setVerticalFieldOfView) map.setVerticalFieldOfView(FP_FOV);
+      if (!G.worldOn) {
+        G.worldOn = true;
+        const loading = el('div', 'gm-loading', '🌳 주변 나무·사람을 만드는 중…');
+        box.appendChild(loading);
+        ensureWorld()
+          .then(() => window.World3D.attach(map, G.pos))
+          .catch((err) => {
+            console.warn('[game.js] 1인칭 3D 물건을 못 만들어 지도만 보여요:', err);
+            toast('3D 나무·사람은 못 불러왔어요<small>지도만으로 1인칭을 계속해요</small>', 2200);
+          })
+          .finally(() => loading.remove());
+      }
+    } else {
+      if (map.setVerticalFieldOfView && G.saved && G.saved.fov) map.setVerticalFieldOfView(G.saved.fov);
+      map.jumpTo({ zoom: GAME_ZOOM, pitch: GAME_PITCH });
+    }
+  }
+
+  // 1인칭 카메라: 눈높이(eye m)에서 FP_PITCH 각도로 앞을 본다.
+  // MapLibre는 '바닥의 한 점'을 중심으로 카메라를 두므로, 눈에서 바닥까지의 시선이 닿는 점과 줌을 계산한다.
+  function fpCamera() {
+    const map = G.map;
+    const eye = eyeHeight();
+    const P = toRad(FP_PITCH);
+    const ground = eye * Math.tan(P);                    // 발밑에서 화면 가운데 바닥점까지(m)
+    const h = toRad(G.heading);
+    const c = {
+      lat: G.pos.lat + (Math.cos(h) * ground) / 111320,
+      lng: G.pos.lng + (Math.sin(h) * ground) / (111320 * Math.cos(toRad(G.pos.lat))),
+    };
+    const fov = toRad(map.getVerticalFieldOfView ? map.getVerticalFieldOfView() : 36.87);
+    const ctc = (0.5 / Math.tan(fov / 2)) * map.getContainer().clientHeight; // 카메라~가운데 거리(픽셀)
+    const slant = eye / Math.cos(P);                     // 눈~가운데 바닥점 거리(m)
+    const mpp = slant / ctc;                             // 1픽셀이 몇 m인가
+    const zoom = Math.log2((40075016.686 * Math.cos(toRad(G.pos.lat))) / (512 * mpp));
+    map.jumpTo({ center: ll(c), zoom: Math.min(24, zoom), pitch: FP_PITCH, bearing: G.heading, padding: { top: 0, bottom: 0, left: 0, right: 0 } });
+  }
+
   // ───────────────────── 6. 게임 진행 ─────────────────────
   function start() {
     const map = window.mapUtils && window.mapUtils.getMap && window.mapUtils.getMap();
@@ -228,7 +328,8 @@
       dragPan: map.dragPan.isEnabled(), dragRotate: map.dragRotate.isEnabled(), keyboard: map.keyboard.isEnabled(),
       touchZoomRotate: map.touchZoomRotate.isEnabled(), doubleClickZoom: map.doubleClickZoom.isEnabled(),
       pitch: map.getPitch(), bearing: map.getBearing(), zoom: map.getZoom(), center: map.getCenter(),
-      scrollY: window.scrollY,
+      scrollY: window.scrollY, maxPitch: map.getMaxPitch(), maxZoom: map.getMaxZoom(),
+      fov: map.getVerticalFieldOfView ? map.getVerticalFieldOfView() : null,
     };
     map.dragPan.disable(); map.dragRotate.disable(); map.keyboard.disable(); map.doubleClickZoom.disable();
     box.classList.add('is-game');
@@ -240,10 +341,14 @@
     if (!box.classList.contains('is-game-full')) box.scrollIntoView({ block: 'center', behavior: 'smooth' });
 
     buildHud(box);
-    const av = el('div', '', '<div class="gm-avatar">' + avatarEmoji() + '</div><div class="gm-avatar-shadow"></div>');
+    const av = el('div', 'gm-avatar-wrap', '<div class="gm-avatar">' + avatarEmoji() + '</div><div class="gm-avatar-shadow"></div>');
     G.avatar = new maplibregl.Marker({ element: av, anchor: 'bottom', pitchAlignment: 'viewport', rotationAlignment: 'viewport' }).setLngLat(ll(G.pos)).addTo(map);
     placeBeacon();
-    map.jumpTo({ center: ll(G.pos), zoom: GAME_ZOOM, pitch: GAME_PITCH, bearing: G.heading, padding: camPadding() });
+    G.worldOn = false;
+    setRun(false);
+    setView(G.view);
+    if (G.view === 'fp') fpCamera();
+    else map.jumpTo({ center: ll(G.pos), zoom: GAME_ZOOM, pitch: GAME_PITCH, bearing: G.heading, padding: camPadding() });
     toast('찾아가기 시작! <small>' + esc(targets[0].label) + '부터 가 볼까요?</small>', 1800);
 
     window.addEventListener('keydown', onKey, true);
@@ -262,6 +367,8 @@
   function onKey(ev) {
     if (!G.on) return;
     if (ev.key === 'Escape' && ev.type === 'keydown') { stop(); return; }
+    if (ev.code === 'KeyV' && ev.type === 'keydown' && !ev.repeat) { setView(G.view === 'fp' ? '3p' : 'fp'); return; }
+    if (ev.key === 'Shift') { setRun(ev.type === 'keydown'); return; }
     const k = KEYMAP[ev.code];
     if (!k) return;
     const t = ev.target;
@@ -281,7 +388,7 @@
     G.heading = (G.heading + 360) % 360;
     const move = (k.has('up') ? 1 : 0) - (k.has('down') ? 0.6 : 0);
     if (move) {
-      const d = GAME_SPEED_MS * dt * move;
+      const d = (G.view === 'fp' ? FP_SPEED_MS : GAME_SPEED_MS) * (G.run ? RUN_X : 1) * dt * move;
       const next = {
         lat: G.pos.lat + (Math.cos(toRad(G.heading)) * d) / 111320,
         lng: G.pos.lng + (Math.sin(toRad(G.heading)) * d) / (111320 * Math.cos(toRad(G.pos.lat))),
@@ -294,7 +401,9 @@
     }
     G.avatar.setLngLat(ll(G.pos));
     G.avatar.getElement().firstChild.classList.toggle('walking', !!move);
-    G.map.jumpTo({ center: ll(G.pos), bearing: G.heading, pitch: GAME_PITCH, padding: camPadding() });
+    if (G.view === 'fp') fpCamera();
+    else G.map.jumpTo({ center: ll(G.pos), bearing: G.heading, pitch: GAME_PITCH, zoom: Math.min(G.map.getZoom(), 19.5), padding: camPadding() });
+    if (window.World3D && G.worldOn) window.World3D.update(G.pos, dt);
 
     const t = G.targets[G.idx];
     const dist = haversine(G.pos, t);
@@ -348,10 +457,15 @@
     if (G.avatar) G.avatar.remove();
     if (G.beacon) G.beacon.remove();
     G.avatar = G.beacon = null;
+    if (window.World3D) window.World3D.detach();
+    G.worldOn = false;
     const box = map.getContainer();
-    box.classList.remove('is-game', 'is-game-full');
+    box.classList.remove('is-game', 'is-game-full', 'is-fp');
     document.documentElement.style.overflow = '';
     const s = G.saved || {};
+    if (s.fov && map.setVerticalFieldOfView) map.setVerticalFieldOfView(s.fov);
+    if (s.maxZoom) map.setMaxZoom(s.maxZoom);
+    if (s.maxPitch) map.setMaxPitch(s.maxPitch);
     if (s.dragPan) map.dragPan.enable();
     if (s.dragRotate) map.dragRotate.enable();
     if (s.keyboard) map.keyboard.enable();

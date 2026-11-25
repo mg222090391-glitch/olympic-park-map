@@ -25,6 +25,7 @@
  * 배경 지도: OpenFreeMap(무료·키 없음, OpenStreetMap 데이터, 건물 높이 포함).
  *   불러오지 못하면 OpenStreetMap 2D 타일로 자동 대체한다.
  * 데이터가 아직 없을 때 미리보기: 주소 뒤에 ?demo 를 붙이면 mock_data.js(가상 데이터)를 쓴다.
+ * 게임 모드: 데이터가 준비되면 game.js(직접 찾아가기)를 이 파일이 불러온다. index.html에 따로 넣지 않는다.
  * ===================================================================== */
 (function () {
   'use strict';
@@ -1527,6 +1528,9 @@ ${kindVars}
       setOrigin(e.lngLat.lat, e.lngLat.lng, '지도에서 고른 위치');
     });
     initLocation(); // 안에서 recompute()가 불린다
+
+    // '직접 찾아가기' 게임 모드(game.js)는 지도·데이터가 준비된 뒤 불러온다. 없거나 실패해도 지도는 그대로 동작
+    loadScript('game.js').catch((err) => console.warn('[map.js] game.js를 불러오지 못했어요(게임 모드만 빠져요):', err));
 
     // 처음 열 때 하늘에서 내려오며 3D로 기울어지는 장면
     const c = parkCenter();

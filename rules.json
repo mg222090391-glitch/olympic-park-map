@@ -1,0 +1,107 @@
+[
+  {
+    "id": "heat-concert",
+    "when": { "feelsLikeMin": 33 },
+    "profiles": ["concert"],
+    "message": "물과 양산을 챙기세요. 가장 가까운 무더위쉼터를 지도에 표시했어요. 운영 중인 곳이 없으면 가까운 실내 시설에서 쉬어 가세요.",
+    "shelter": "heat"
+  },
+  {
+    "id": "heat-elderly",
+    "when": { "feelsLikeMin": 33 },
+    "profiles": ["elderly"],
+    "message": "무더운 날이에요. 동행하시는 분이 자주 쉬고 물을 드시도록 챙겨 주세요. 가까운 무더위쉼터를 지도에 표시했어요. 운영 중인 곳이 없으면 가까운 실내 시설을 이용하세요.",
+    "shelter": "heat"
+  },
+  {
+    "id": "heat-pregnant",
+    "when": { "feelsLikeMin": 33 },
+    "profiles": ["pregnant"],
+    "message": "더위에 쉽게 지칠 수 있어요. 물을 자주 마시고 그늘에서 쉬어 가세요. 가까운 무더위쉼터를 지도에 표시했어요. 운영 중인 곳이 없으면 가까운 실내 시설을 이용하세요.",
+    "shelter": "heat"
+  },
+  {
+    "id": "heat-stroller",
+    "when": { "feelsLikeMin": 33 },
+    "profiles": ["stroller"],
+    "message": "유아차 안은 더 뜨거워질 수 있어요. 아기 물과 햇빛 가리개를 챙기세요. 가까운 무더위쉼터를 지도에 표시했어요. 운영 중인 곳이 없으면 가까운 실내 시설을 이용하세요.",
+    "shelter": "heat"
+  },
+  {
+    "id": "heat-all-extreme",
+    "when": { "feelsLikeMin": 35 },
+    "profiles": ["all"],
+    "message": "매우 더운 날이에요. 한낮에는 오래 걷지 말고 실내에서 자주 쉬어 가세요.",
+    "shelter": "heat"
+  },
+  {
+    "id": "cold-stroller",
+    "when": { "feelsLikeMax": 0 },
+    "profiles": ["stroller"],
+    "message": "체감온도가 영하예요. 아기 담요를 챙기세요. 가까운 한파쉼터와 실내 시설을 지도에 표시했어요. 운영 중인 쉼터가 없으면 가까운 실내 시설에서 몸을 녹이세요.",
+    "shelter": "cold"
+  },
+  {
+    "id": "cold-elderly",
+    "when": { "feelsLikeMax": 0 },
+    "profiles": ["elderly"],
+    "message": "체감온도가 영하예요. 동행하시는 분께 장갑과 목도리를 챙겨 드리세요. 가까운 한파쉼터를 지도에 표시했어요. 운영 중인 곳이 없으면 가까운 실내 시설을 이용하세요.",
+    "shelter": "cold"
+  },
+  {
+    "id": "cold-pregnant",
+    "when": { "feelsLikeMax": 0 },
+    "profiles": ["pregnant"],
+    "message": "체감온도가 영하예요. 따뜻하게 입고 미끄러운 길을 조심하세요. 가까운 한파쉼터를 지도에 표시했어요. 운영 중인 곳이 없으면 가까운 실내 시설을 이용하세요.",
+    "shelter": "cold"
+  },
+  {
+    "id": "cold-concert",
+    "when": { "feelsLikeMax": 0 },
+    "profiles": ["concert"],
+    "message": "밖에서 오래 기다리면 많이 추워요. 핫팩과 두꺼운 외투를 챙기세요. 가까운 한파쉼터를 지도에 표시했어요. 운영 중인 곳이 없으면 가까운 실내 시설에서 몸을 녹이세요.",
+    "shelter": "cold"
+  },
+  {
+    "id": "cold-all-extreme",
+    "when": { "feelsLikeMax": -10 },
+    "profiles": ["all"],
+    "message": "매우 추운 날이에요. 바깥에 오래 있지 말고 실내에서 자주 몸을 녹이세요.",
+    "shelter": "cold"
+  },
+  {
+    "id": "rain-wheelchair",
+    "when": { "rain": true },
+    "profiles": ["wheelchair"],
+    "message": "비 예보가 있어요. 휠체어용 우비를 챙기세요. 바닥이 미끄러우니 지하철 엘리베이터와 실내 시설 위주로 이동하세요.",
+    "shelter": null
+  },
+  {
+    "id": "rain-stroller",
+    "when": { "rain": true },
+    "profiles": ["stroller"],
+    "message": "비 예보가 있어요. 유아차 레인커버를 챙기세요. 지하철 엘리베이터와 실내 시설 위치를 미리 확인해 두세요.",
+    "shelter": null
+  },
+  {
+    "id": "rain-elderly",
+    "when": { "rain": true },
+    "profiles": ["elderly"],
+    "message": "비 예보가 있어요. 길이 미끄러우니 천천히 걷고, 가까운 화장실과 실내 시설에서 자주 쉬어 가세요.",
+    "shelter": null
+  },
+  {
+    "id": "rain-concert",
+    "when": { "rain": true },
+    "profiles": ["concert"],
+    "message": "비 예보가 있어요. 대기 줄에서 쓸 우비를 챙기세요. 우산은 다른 사람과 부딪힐 수 있어요.",
+    "shelter": null
+  },
+  {
+    "id": "uv-all",
+    "when": { "uvMin": 6 },
+    "profiles": ["all"],
+    "message": "자외선이 강해요. 모자와 선크림을 챙기세요.",
+    "shelter": null
+  }
+]

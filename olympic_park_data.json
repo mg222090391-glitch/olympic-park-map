@@ -1,0 +1,2969 @@
+{
+ "meta": {
+  "park_center": [
+   37.5189,
+   127.1239
+  ],
+  "notes": [
+   "KSPO 편의시설 정보는 2021년에 한 번 수집된 데이터라 현재와 다를 수 있음",
+   "화장실 좌표는 카카오맵 개방화장실 위치로 보정함. 몽촌역사관 화장실은 서울백제어린이박물관 개방화장실(옛 몽촌역사관 건물로 추정) 좌표를 씀",
+   "주차장 전체 면수가 없어 점유율(%)은 계산할 수 없음",
+   "공원 경계까지 거리는 KSPO 편의시설 지점 중 가장 가까운 지점까지의 거리"
+  ]
+ },
+ "toilets": [
+  {
+   "name": "남2문(옥외화장실)",
+   "lat": 37.514996,
+   "lng": 127.122225,
+   "coord_source": "카카오맵 장소 좌표",
+   "female_stalls": 4,
+   "male_fixtures": 8,
+   "accessible_stalls": 2,
+   "total": 12,
+   "open": "불규칙",
+   "open_detail": "올림픽공원 개방 시간 내",
+   "emergency_bell": true,
+   "diaper_table": false,
+   "cctv": false,
+   "source": "서울시 공중화장실 + KSPO 편의시설"
+  },
+  {
+   "name": "토성(옥외화장실)",
+   "lat": 37.521096,
+   "lng": 127.121008,
+   "coord_source": "카카오맵 장소 좌표",
+   "female_stalls": 4,
+   "male_fixtures": 8,
+   "accessible_stalls": 1,
+   "total": 12,
+   "open": "불규칙",
+   "open_detail": "올림픽공원 개방 시간 내",
+   "emergency_bell": true,
+   "diaper_table": true,
+   "cctv": false,
+   "source": "서울시 공중화장실 + KSPO 편의시설"
+  },
+  {
+   "name": "88호수(옥외화장실)",
+   "lat": 37.520207,
+   "lng": 127.125751,
+   "coord_source": "카카오맵 장소 좌표",
+   "female_stalls": 4,
+   "male_fixtures": 8,
+   "accessible_stalls": 2,
+   "total": 12,
+   "open": "불규칙",
+   "open_detail": "올림픽공원 개방 시간 내",
+   "emergency_bell": true,
+   "diaper_table": true,
+   "cctv": false,
+   "source": "서울시 공중화장실 + KSPO 편의시설"
+  },
+  {
+   "name": "평화의광장A-2동(옥외화장실)",
+   "lat": 37.518082,
+   "lng": 127.116415,
+   "coord_source": "카카오맵 장소 좌표",
+   "female_stalls": 11,
+   "male_fixtures": 12,
+   "accessible_stalls": 2,
+   "total": 23,
+   "open": "불규칙",
+   "open_detail": "올림픽공원 개방 시간 내",
+   "emergency_bell": true,
+   "diaper_table": false,
+   "cctv": false,
+   "source": "서울시 공중화장실 + KSPO 편의시설"
+  },
+  {
+   "name": "몽촌역사관",
+   "lat": 37.52389,
+   "lng": 127.124308,
+   "coord_source": "카카오맵 장소 좌표 (서울백제어린이박물관 개방화장실, 옛 몽촌역사관 건물로 추정)",
+   "female_stalls": 5,
+   "male_fixtures": 4,
+   "accessible_stalls": 2,
+   "total": 9,
+   "open": "정시",
+   "open_detail": "09:00-19:00",
+   "emergency_bell": true,
+   "diaper_table": true,
+   "cctv": true,
+   "source": "서울시 공중화장실 + KSPO 편의시설"
+  },
+  {
+   "name": "한성백제박물관",
+   "lat": 37.515572,
+   "lng": 127.120615,
+   "coord_source": "카카오맵 장소 좌표",
+   "female_stalls": 37,
+   "male_fixtures": 29,
+   "accessible_stalls": 8,
+   "total": 66,
+   "open": "정시",
+   "open_detail": "09:00-19:00",
+   "emergency_bell": true,
+   "diaper_table": true,
+   "cctv": true,
+   "source": "서울시 공중화장실 + KSPO 편의시설"
+  },
+  {
+   "name": "피크닉장(옥외화장실)",
+   "lat": 37.524418,
+   "lng": 127.12323,
+   "coord_source": "카카오맵 장소 좌표",
+   "female_stalls": 3,
+   "male_fixtures": 4,
+   "accessible_stalls": 0,
+   "total": 7,
+   "open": "불규칙",
+   "open_detail": "올림픽공원 개방 시간 내",
+   "emergency_bell": true,
+   "diaper_table": true,
+   "cctv": false,
+   "source": "서울시 공중화장실 + KSPO 편의시설"
+  },
+  {
+   "name": "만남의광장A-2동(옥외화장실)",
+   "lat": 37.516745,
+   "lng": 127.129114,
+   "coord_source": "카카오맵 장소 좌표",
+   "female_stalls": 9,
+   "male_fixtures": 12,
+   "accessible_stalls": 2,
+   "total": 21,
+   "open": "불규칙",
+   "open_detail": "올림픽공원 개방 시간 내",
+   "emergency_bell": true,
+   "diaper_table": true,
+   "cctv": false,
+   "source": "서울시 공중화장실 + KSPO 편의시설"
+  },
+  {
+   "name": "P1(옥외화장실)",
+   "lat": 37.51443,
+   "lng": 127.125403,
+   "coord_source": "카카오맵 장소 좌표",
+   "female_stalls": 4,
+   "male_fixtures": 8,
+   "accessible_stalls": 2,
+   "total": 12,
+   "open": "불규칙",
+   "open_detail": "올림픽공원 개방 시간 내",
+   "emergency_bell": true,
+   "diaper_table": true,
+   "cctv": false,
+   "source": "서울시 공중화장실 + KSPO 편의시설"
+  },
+  {
+   "name": "지구촌(옥외화장실)",
+   "lat": 37.516896,
+   "lng": 127.121406,
+   "coord_source": "카카오맵 장소 좌표",
+   "female_stalls": 5,
+   "male_fixtures": 5,
+   "accessible_stalls": 1,
+   "total": 10,
+   "open": "불규칙",
+   "open_detail": "올림픽공원 개방 시간 내",
+   "emergency_bell": true,
+   "diaper_table": true,
+   "cctv": false,
+   "source": "서울시 공중화장실 + KSPO 편의시설"
+  },
+  {
+   "name": "북2문(옥외화장실)",
+   "lat": 37.52269,
+   "lng": 127.126934,
+   "coord_source": "카카오맵 장소 좌표",
+   "female_stalls": 4,
+   "male_fixtures": 8,
+   "accessible_stalls": 1,
+   "total": 12,
+   "open": "불규칙",
+   "open_detail": "올림픽공원 개방 시간 내",
+   "emergency_bell": true,
+   "diaper_table": true,
+   "cctv": false,
+   "source": "서울시 공중화장실 + KSPO 편의시설"
+  },
+  {
+   "name": "장미(옥외화장실)",
+   "lat": 37.514048,
+   "lng": 127.12753,
+   "coord_source": "카카오맵 장소 좌표",
+   "female_stalls": 4,
+   "male_fixtures": 8,
+   "accessible_stalls": 1,
+   "total": 12,
+   "open": "불규칙",
+   "open_detail": "올림픽공원 개방 시간 내",
+   "emergency_bell": true,
+   "diaper_table": true,
+   "cctv": false,
+   "source": "서울시 공중화장실 + KSPO 편의시설"
+  },
+  {
+   "name": "장자목(옥외화장실)",
+   "lat": 37.518293,
+   "lng": 127.12304,
+   "coord_source": "카카오맵 장소 좌표",
+   "female_stalls": 4,
+   "male_fixtures": 8,
+   "accessible_stalls": 1,
+   "total": 12,
+   "open": "불규칙",
+   "open_detail": "올림픽공원 개방 시간 내",
+   "emergency_bell": true,
+   "diaper_table": false,
+   "cctv": false,
+   "source": "서울시 공중화장실 + KSPO 편의시설"
+  },
+  {
+   "name": "소마미술관",
+   "lat": 37.516911,
+   "lng": 127.118156,
+   "coord_source": "카카오맵 장소 좌표",
+   "female_stalls": 4,
+   "male_fixtures": 8,
+   "accessible_stalls": 2,
+   "total": 12,
+   "open": "불규칙",
+   "open_detail": "올림픽공원 개방 시간 내",
+   "emergency_bell": true,
+   "diaper_table": false,
+   "cctv": false,
+   "source": "서울시 공중화장실 + KSPO 편의시설"
+  },
+  {
+   "name": "평화의광장A-1동(옥외화장실)",
+   "lat": 37.519065,
+   "lng": 127.116033,
+   "coord_source": "카카오맵 장소 좌표",
+   "female_stalls": 6,
+   "male_fixtures": 11,
+   "accessible_stalls": 2,
+   "total": 17,
+   "open": "불규칙",
+   "open_detail": "올림픽공원 개방 시간 내",
+   "emergency_bell": true,
+   "diaper_table": false,
+   "cctv": false,
+   "source": "서울시 공중화장실 + KSPO 편의시설"
+  },
+  {
+   "name": "실내테니스장 (실내 테니스장 근처)",
+   "lat": 37.5140784,
+   "lng": 127.1276414,
+   "coord_source": "KSPO 편의시설 좌표",
+   "female_stalls": null,
+   "male_fixtures": null,
+   "accessible_stalls": null,
+   "total": null,
+   "open": null,
+   "open_detail": null,
+   "emergency_bell": null,
+   "diaper_table": null,
+   "cctv": null,
+   "source": "KSPO 편의시설만 (칸 수 정보 없음)",
+   "note": ""
+  },
+  {
+   "name": "88마당 (야생화학습장 가는길)",
+   "lat": 37.5187798,
+   "lng": 127.1234518,
+   "coord_source": "KSPO 편의시설 좌표",
+   "female_stalls": null,
+   "male_fixtures": null,
+   "accessible_stalls": null,
+   "total": null,
+   "open": null,
+   "open_detail": null,
+   "emergency_bell": null,
+   "diaper_table": null,
+   "cctv": null,
+   "source": "KSPO 편의시설만 (칸 수 정보 없음)",
+   "note": ""
+  },
+  {
+   "name": "KSPO DOME(올림픽 체조경기장) (2-1 게이트 내부)",
+   "lat": 37.5186663,
+   "lng": 127.1271037,
+   "coord_source": "KSPO 편의시설 좌표",
+   "female_stalls": null,
+   "male_fixtures": null,
+   "accessible_stalls": null,
+   "total": null,
+   "open": null,
+   "open_detail": null,
+   "emergency_bell": null,
+   "diaper_table": null,
+   "cctv": null,
+   "source": "KSPO 편의시설만 (칸 수 정보 없음)",
+   "note": "여자화장실"
+  },
+  {
+   "name": "KSPO DOME(올림픽 체조경기장) (2-3게이트 내부)",
+   "lat": 37.5195981,
+   "lng": 127.1267815,
+   "coord_source": "KSPO 편의시설 좌표",
+   "female_stalls": null,
+   "male_fixtures": null,
+   "accessible_stalls": null,
+   "total": null,
+   "open": null,
+   "open_detail": null,
+   "emergency_bell": null,
+   "diaper_table": null,
+   "cctv": null,
+   "source": "KSPO 편의시설만 (칸 수 정보 없음)",
+   "note": "여자화장실"
+  },
+  {
+   "name": "88마당 (수영장 방향)",
+   "lat": 37.5202267,
+   "lng": 127.1257545,
+   "coord_source": "KSPO 편의시설 좌표",
+   "female_stalls": null,
+   "male_fixtures": null,
+   "accessible_stalls": null,
+   "total": null,
+   "open": null,
+   "open_detail": null,
+   "emergency_bell": null,
+   "diaper_table": null,
+   "cctv": null,
+   "source": "KSPO 편의시설만 (칸 수 정보 없음)",
+   "note": ""
+  },
+  {
+   "name": "까치다리 (북2문 부근)",
+   "lat": 37.5226064,
+   "lng": 127.1269152,
+   "coord_source": "KSPO 편의시설 좌표",
+   "female_stalls": null,
+   "male_fixtures": null,
+   "accessible_stalls": null,
+   "total": null,
+   "open": null,
+   "open_detail": null,
+   "emergency_bell": null,
+   "diaper_table": null,
+   "cctv": null,
+   "source": "KSPO 편의시설만 (칸 수 정보 없음)",
+   "note": ""
+  },
+  {
+   "name": "88마당 (수영경기장 근처)",
+   "lat": 37.5202725,
+   "lng": 127.1261166,
+   "coord_source": "KSPO 편의시설 좌표",
+   "female_stalls": null,
+   "male_fixtures": null,
+   "accessible_stalls": null,
+   "total": null,
+   "open": null,
+   "open_detail": null,
+   "emergency_bell": null,
+   "diaper_table": null,
+   "cctv": null,
+   "source": "KSPO 편의시설만 (칸 수 정보 없음)",
+   "note": ""
+  },
+  {
+   "name": "가족놀이동산",
+   "lat": 37.5243715,
+   "lng": 127.1232678,
+   "coord_source": "KSPO 편의시설 좌표",
+   "female_stalls": null,
+   "male_fixtures": null,
+   "accessible_stalls": null,
+   "total": null,
+   "open": null,
+   "open_detail": null,
+   "emergency_bell": null,
+   "diaper_table": null,
+   "cctv": null,
+   "source": "KSPO 편의시설만 (칸 수 정보 없음)",
+   "note": ""
+  },
+  {
+   "name": "물레방아 (백제학연구소 부근)",
+   "lat": 37.5172797,
+   "lng": 127.1201507,
+   "coord_source": "KSPO 편의시설 좌표",
+   "female_stalls": null,
+   "male_fixtures": null,
+   "accessible_stalls": null,
+   "total": null,
+   "open": null,
+   "open_detail": null,
+   "emergency_bell": null,
+   "diaper_table": null,
+   "cctv": null,
+   "source": "KSPO 편의시설만 (칸 수 정보 없음)",
+   "note": ""
+  }
+ ],
+ "facilities": [
+  {
+   "type": "쓰레기통",
+   "place": "올림픽홀(뮤즈라이브)",
+   "detail": "1-3게이트 앞",
+   "lat": 37.51478,
+   "lng": 127.12699,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "올림픽홀(뮤즈라이브)",
+   "detail": "1-1게이트 앞",
+   "lat": 37.5150613,
+   "lng": 127.1271355,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "올림픽홀(뮤즈라이브)",
+   "detail": "ticket box근처",
+   "lat": 37.5153881,
+   "lng": 127.1271355,
+   "note": ""
+  },
+  {
+   "type": "자판기",
+   "place": "올림픽홀(뮤즈라이브)",
+   "detail": "ticket box 근처",
+   "lat": 37.5153881,
+   "lng": 127.1271355,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "올림픽테니스장",
+   "detail": "실외 테니스장",
+   "lat": 37.5147028,
+   "lng": 127.1284129,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "장미광장",
+   "detail": "광장 근처",
+   "lat": 37.5133037,
+   "lng": 127.1277595,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "장미광장",
+   "detail": "광장 입구 근처",
+   "lat": 37.5128944,
+   "lng": 127.1281809,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "장미광장",
+   "detail": "광장 근처",
+   "lat": 37.5127856,
+   "lng": 127.1270319,
+   "note": ""
+  },
+  {
+   "type": "자판기",
+   "place": "장미광장",
+   "detail": "광장 근처",
+   "lat": 37.5127856,
+   "lng": 127.1270319,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "장미광장",
+   "detail": "광장 근처",
+   "lat": 37.5131425,
+   "lng": 127.1271845,
+   "note": ""
+  },
+  {
+   "type": "자판기",
+   "place": "우리금융아트홀(올림픽역도경기장)",
+   "detail": "아트홀 근처",
+   "lat": 37.5174938,
+   "lng": 127.1250809,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "우리금융아트홀(올림픽역도경기장)",
+   "detail": "아트홀 근처",
+   "lat": 37.5174393,
+   "lng": 127.1249653,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "벨로드롬(올림픽사이클경기장)",
+   "detail": "농구장 옆",
+   "lat": 37.5174981,
+   "lng": 127.1238605,
+   "note": ""
+  },
+  {
+   "type": "자판기",
+   "place": "88마당",
+   "detail": "놀이시설 앞",
+   "lat": 37.5179882,
+   "lng": 127.1236325,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "88마당",
+   "detail": "놀이시설 앞",
+   "lat": 37.5179469,
+   "lng": 127.1237261,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "88마당",
+   "detail": "시니어복합놀이시설",
+   "lat": 37.5182341,
+   "lng": 127.1234428,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "SK핸드볼경기장(올림픽펜싱경기장)",
+   "detail": "2-2게이트 앞",
+   "lat": 37.5177339,
+   "lng": 127.1257116,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "SK핸드볼경기장(올림픽펜싱경기장)",
+   "detail": "2-3티켓부스 옆",
+   "lat": 37.517822,
+   "lng": 127.1259315,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "SK핸드볼경기장(올림픽펜싱경기장)",
+   "detail": "2-3게이트 앞",
+   "lat": 37.5178977,
+   "lng": 127.1263379,
+   "note": ""
+  },
+  {
+   "type": "자판기",
+   "place": "SK핸드볼경기장(올림픽펜싱경기장)",
+   "detail": "2-3게이트 앞",
+   "lat": 37.5178975,
+   "lng": 127.1263875,
+   "note": ""
+  },
+  {
+   "type": "간이편의점",
+   "place": "SK핸드볼경기장(올림픽펜싱경기장)",
+   "detail": "2-4게이트 앞",
+   "lat": 37.5179797,
+   "lng": 127.1266158,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "SK핸드볼경기장(올림픽펜싱경기장)",
+   "detail": "티켓박스 옆",
+   "lat": 37.5179799,
+   "lng": 127.1265458,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "SK핸드볼경기장(올림픽펜싱경기장)",
+   "detail": "2-4게이트 앞)",
+   "lat": 37.5178108,
+   "lng": 127.1267271,
+   "note": ""
+  },
+  {
+   "type": "식음료판매점",
+   "place": "SK핸드볼경기장(올림픽펜싱경기장)",
+   "detail": "2-4게이트앞",
+   "lat": 37.5177414,
+   "lng": 127.1268482,
+   "note": "영업일 유동적"
+  },
+  {
+   "type": "쓰레기통",
+   "place": "SK핸드볼경기장(올림픽펜싱경기장)",
+   "detail": "2-5게이트 앞",
+   "lat": 37.517647,
+   "lng": 127.126935,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "조각공원",
+   "detail": "",
+   "lat": 37.516695,
+   "lng": 127.1208994,
+   "note": ""
+  },
+  {
+   "type": "음수대",
+   "place": "조각공원",
+   "detail": "",
+   "lat": 37.516695,
+   "lng": 127.1208994,
+   "note": "코로나19로 사용불가"
+  },
+  {
+   "type": "쓰레기통",
+   "place": "소마미술관",
+   "detail": "",
+   "lat": 37.5163341,
+   "lng": 127.1192773,
+   "note": ""
+  },
+  {
+   "type": "자판기",
+   "place": "소마미술관",
+   "detail": "도보산책로 근처",
+   "lat": 37.5168912,
+   "lng": 127.1193739,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "소마미술관",
+   "detail": "도보산책로 근처",
+   "lat": 37.5168984,
+   "lng": 127.1194319,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "소마미술관",
+   "detail": "1관 입구 부근",
+   "lat": 37.5174135,
+   "lng": 127.1177823,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "소마미술관",
+   "detail": "지구촌공원 부근",
+   "lat": 37.5165567,
+   "lng": 127.1174648,
+   "note": ""
+  },
+  {
+   "type": "자판기",
+   "place": "평화의 광장",
+   "detail": "어린이놀이터 부근",
+   "lat": 37.5178446,
+   "lng": 127.1172013,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "평화의 광장",
+   "detail": "어린이놀이터 부근",
+   "lat": 37.5178916,
+   "lng": 127.1171765,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "평화의 광장",
+   "detail": "어린이놀이터 부근",
+   "lat": 37.5179531,
+   "lng": 127.1169297,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "수변무대A",
+   "detail": "국기광장 입구 부근",
+   "lat": 37.5181812,
+   "lng": 127.1176435,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "수변무대A",
+   "detail": "소마미술관 부근",
+   "lat": 37.517781,
+   "lng": 127.1178071,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "88마당",
+   "detail": "자전거 대여소 앞",
+   "lat": 37.5179414,
+   "lng": 127.1252197,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "88마당",
+   "detail": "88서울올림픽 조각상 방향",
+   "lat": 37.5183908,
+   "lng": 127.1259594,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "88마당",
+   "detail": "88서울올림픽 조각상 방향",
+   "lat": 37.5187104,
+   "lng": 127.1261723,
+   "note": ""
+  },
+  {
+   "type": "자판기",
+   "place": "88마당",
+   "detail": "체조경기장2-2게이트 방향",
+   "lat": 37.5189825,
+   "lng": 127.1262702,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "88마당",
+   "detail": "체조경기장2-2게이트 방향",
+   "lat": 37.51902,
+   "lng": 127.1262698,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "88마당",
+   "detail": "체조경기장2-3게이트 방향",
+   "lat": 37.5196308,
+   "lng": 127.1261444,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "88마당",
+   "detail": "등나무 앞",
+   "lat": 37.5200557,
+   "lng": 127.1256009,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "88마당",
+   "detail": "등나무 앞",
+   "lat": 37.5190479,
+   "lng": 127.1245576,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "88마당",
+   "detail": "등나무 앞",
+   "lat": 37.5184115,
+   "lng": 127.1237439,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "88마당",
+   "detail": "등나무 앞",
+   "lat": 37.5178844,
+   "lng": 127.1244027,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "88마당",
+   "detail": "우리금융아트홀 방향",
+   "lat": 37.5176935,
+   "lng": 127.1247641,
+   "note": ""
+  },
+  {
+   "type": "식음료판매점",
+   "place": "88마당",
+   "detail": "우리금융아트홀 방향",
+   "lat": 37.5177151,
+   "lng": 127.1249016,
+   "note": "영업일 유동적"
+  },
+  {
+   "type": "간이편의점",
+   "place": "88마당",
+   "detail": "우리금융아트홀 방향",
+   "lat": 37.5177143,
+   "lng": 127.1248472,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "올림픽수영경기장",
+   "detail": "",
+   "lat": 37.519968,
+   "lng": 127.126092,
+   "note": ""
+  },
+  {
+   "type": "자판기",
+   "place": "올림픽수영경기장",
+   "detail": "",
+   "lat": 37.519968,
+   "lng": 127.126092,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "KSPO DOME(올림픽 체조경기장)",
+   "detail": "2-1게이트 앞",
+   "lat": 37.5185463,
+   "lng": 127.1270634,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "KSPO DOME(올림픽 체조경기장)",
+   "detail": "2-2게이트 앞",
+   "lat": 37.5187875,
+   "lng": 127.1266182,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "KSPO DOME(올림픽 체조경기장)",
+   "detail": "2-2게이트 앞",
+   "lat": 37.5192018,
+   "lng": 127.126537,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "KSPO DOME(올림픽 체조경기장)",
+   "detail": "2-3게이트 앞",
+   "lat": 37.51961,
+   "lng": 127.1266775,
+   "note": ""
+  },
+  {
+   "type": "흡연구역",
+   "place": "KSPO DOME(올림픽 체조경기장)",
+   "detail": "1-3게이트 앞",
+   "lat": 37.5199164,
+   "lng": 127.1275513,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "KSPO DOME(올림픽 체조경기장)",
+   "detail": "1-3게이트 앞",
+   "lat": 37.519855,
+   "lng": 127.1277997,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "올림픽수영경기장",
+   "detail": "1-3게이트 앞",
+   "lat": 37.5206703,
+   "lng": 127.1272689,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "올림픽수영경기장",
+   "detail": "1-2게이트 앞",
+   "lat": 37.5211261,
+   "lng": 127.1272582,
+   "note": ""
+  },
+  {
+   "type": "흡연구역",
+   "place": "올림픽수영경기장",
+   "detail": "1-1게이트 부근",
+   "lat": 37.5215369,
+   "lng": 127.1267147,
+   "note": ""
+  },
+  {
+   "type": "간이편의점",
+   "place": "88호수수변무대",
+   "detail": "",
+   "lat": 37.5206051,
+   "lng": 127.12561,
+   "note": "영업일 유동적"
+  },
+  {
+   "type": "쓰레기통",
+   "place": "88호수수변무대",
+   "detail": "",
+   "lat": 37.5206064,
+   "lng": 127.1255678,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "88마당",
+   "detail": "수영장 방향 등나무 옆",
+   "lat": 37.5204964,
+   "lng": 127.1254283,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "88호수수변무대",
+   "detail": "",
+   "lat": 37.5206237,
+   "lng": 127.1256583,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "서울역사편찬원",
+   "detail": "88호수 부근",
+   "lat": 37.5218291,
+   "lng": 127.124523,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "서울역사편찬원",
+   "detail": "팔각정 가는 길",
+   "lat": 37.522466,
+   "lng": 127.1245643,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "몽촌정 팔각정",
+   "detail": "팔각정 앞",
+   "lat": 37.5228356,
+   "lng": 127.1253656,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "까치다리",
+   "detail": "",
+   "lat": 37.5228843,
+   "lng": 127.1264847,
+   "note": ""
+  },
+  {
+   "type": "자판기",
+   "place": "까치다리",
+   "detail": "북2문 부근",
+   "lat": 37.5225697,
+   "lng": 127.126816,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "까치다리",
+   "detail": "북2문 부근",
+   "lat": 37.5225617,
+   "lng": 127.1267791,
+   "note": ""
+  },
+  {
+   "type": "음수대",
+   "place": "까치다리",
+   "detail": "북2문 부근",
+   "lat": 37.5225617,
+   "lng": 127.1267791,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "백제집자리전시관",
+   "detail": "",
+   "lat": 37.520705,
+   "lng": 127.123188,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "백제집자리전시관",
+   "detail": "",
+   "lat": 37.5208423,
+   "lng": 127.1234897,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "백제집자리전시관",
+   "detail": "",
+   "lat": 37.5210939,
+   "lng": 127.124339,
+   "note": ""
+  },
+  {
+   "type": "자판기",
+   "place": "백제집자리전시관",
+   "detail": "",
+   "lat": 37.5210939,
+   "lng": 127.124339,
+   "note": ""
+  },
+  {
+   "type": "간이편의점",
+   "place": "백제집자리전시관",
+   "detail": "",
+   "lat": 37.5207155,
+   "lng": 127.1253049,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "백제집자리전시관",
+   "detail": "",
+   "lat": 37.5207155,
+   "lng": 127.1253049,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "백제집자리전시관",
+   "detail": "88호수 앞",
+   "lat": 37.5207766,
+   "lng": 127.1255889,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "88마당",
+   "detail": "수영경기장 근처",
+   "lat": 37.5202725,
+   "lng": 127.1261166,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "올림픽테니스장",
+   "detail": "실외 테니스장",
+   "lat": 37.515208,
+   "lng": 127.128882,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "실내테니스장",
+   "detail": "대중음악전문공연장 근처",
+   "lat": 37.51437,
+   "lng": 127.127653,
+   "note": ""
+  },
+  {
+   "type": "흡연구역",
+   "place": "SK핸드볼경기장(올림픽펜싱경기장)",
+   "detail": "1층 주차장 구역",
+   "lat": 37.5165165,
+   "lng": 127.1269001,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "한얼광장",
+   "detail": "핸드볼경기장 등나무 옆",
+   "lat": 37.517597,
+   "lng": 127.1277249,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "한얼광장",
+   "detail": "체조경기장 등나무 옆",
+   "lat": 37.5179041,
+   "lng": 127.1279529,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "한얼광장",
+   "detail": "한얼다리 남단",
+   "lat": 37.5182817,
+   "lng": 127.1278336,
+   "note": ""
+  },
+  {
+   "type": "자판기",
+   "place": "국민체력100 대표체력인증센터",
+   "detail": "출입문 앞",
+   "lat": 37.5177839,
+   "lng": 127.1281789,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "국민체력100 대표체력인증센터",
+   "detail": "",
+   "lat": 37.5171874,
+   "lng": 127.1284535,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "만남의광장",
+   "detail": "",
+   "lat": 37.5172768,
+   "lng": 127.1285561,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "만남의광장",
+   "detail": "",
+   "lat": 37.5173151,
+   "lng": 127.1293664,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "만남의광장",
+   "detail": "안내센터 앞",
+   "lat": 37.5170351,
+   "lng": 127.1290855,
+   "note": ""
+  },
+  {
+   "type": "자판기",
+   "place": "만남의광장",
+   "detail": "안내센터 앞",
+   "lat": 37.5170125,
+   "lng": 127.1291294,
+   "note": ""
+  },
+  {
+   "type": "자판기",
+   "place": "3대3농구장",
+   "detail": "",
+   "lat": 37.5161086,
+   "lng": 127.1283314,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "3대3농구장",
+   "detail": "",
+   "lat": 37.5160969,
+   "lng": 127.1283462,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "만남의광장",
+   "detail": "커핀 그루나루 앞",
+   "lat": 37.5167585,
+   "lng": 127.1297426,
+   "note": ""
+  },
+  {
+   "type": "간이편의점",
+   "place": "만남의광장",
+   "detail": "",
+   "lat": 37.5164029,
+   "lng": 127.1300162,
+   "note": "상시 영업"
+  },
+  {
+   "type": "쓰레기통",
+   "place": "만남의광장",
+   "detail": "CU앞",
+   "lat": 37.5165817,
+   "lng": 127.1301771,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "만남의광장",
+   "detail": "올림픽공원 입구",
+   "lat": 37.5165059,
+   "lng": 127.1303589,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "만남의광장",
+   "detail": "그래피티 벽 내려가는 길",
+   "lat": 37.5167617,
+   "lng": 127.1306448,
+   "note": ""
+  },
+  {
+   "type": "음수대",
+   "place": "만남의광장",
+   "detail": "",
+   "lat": 37.5171991,
+   "lng": 127.1296685,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "가족놀이동산",
+   "detail": "",
+   "lat": 37.5209402,
+   "lng": 127.123255,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "가족놀이동산",
+   "detail": "",
+   "lat": 37.5230441,
+   "lng": 127.1223323,
+   "note": ""
+  },
+  {
+   "type": "자판기",
+   "place": "가족놀이동산",
+   "detail": "",
+   "lat": 37.5230441,
+   "lng": 127.1223323,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "나홀로나무",
+   "detail": "",
+   "lat": 37.5234448,
+   "lng": 127.1222415,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "가족놀이동산",
+   "detail": "",
+   "lat": 37.5234828,
+   "lng": 127.122956,
+   "note": ""
+  },
+  {
+   "type": "자판기",
+   "place": "가족놀이동산",
+   "detail": "",
+   "lat": 37.5236514,
+   "lng": 127.123316,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "가족놀이동산",
+   "detail": "",
+   "lat": 37.5236514,
+   "lng": 127.123316,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "가족놀이동산",
+   "detail": "",
+   "lat": 37.5244882,
+   "lng": 127.1227917,
+   "note": ""
+  },
+  {
+   "type": "음수대",
+   "place": "몽촌역사관",
+   "detail": "정문 앞",
+   "lat": 37.5241181,
+   "lng": 127.1238434,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "몽촌역사관",
+   "detail": "정문 앞",
+   "lat": 37.5241598,
+   "lng": 127.1244067,
+   "note": ""
+  },
+  {
+   "type": "음수대",
+   "place": "청룡교",
+   "detail": "북2문 앞",
+   "lat": 37.5225958,
+   "lng": 127.1267617,
+   "note": ""
+  },
+  {
+   "type": "자판기",
+   "place": "청룡교",
+   "detail": "북2문 앞",
+   "lat": 37.5225958,
+   "lng": 127.1267617,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "피크닉장",
+   "detail": "",
+   "lat": 37.5237958,
+   "lng": 127.1220698,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "피크닉장",
+   "detail": "",
+   "lat": 37.5241457,
+   "lng": 127.1218935,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "나홀로나무",
+   "detail": "",
+   "lat": 37.5232842,
+   "lng": 127.1189893,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "곰말다리",
+   "detail": "",
+   "lat": 37.5213242,
+   "lng": 127.1179141,
+   "note": ""
+  },
+  {
+   "type": "자판기",
+   "place": "곰말다리",
+   "detail": "",
+   "lat": 37.5213242,
+   "lng": 127.1179141,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "나홀로나무",
+   "detail": "",
+   "lat": 37.5216632,
+   "lng": 127.1191958,
+   "note": ""
+  },
+  {
+   "type": "자판기",
+   "place": "나홀로나무",
+   "detail": "",
+   "lat": 37.5225168,
+   "lng": 127.1190456,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "나홀로나무",
+   "detail": "",
+   "lat": 37.521535,
+   "lng": 127.119851,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "나홀로나무",
+   "detail": "",
+   "lat": 37.5213231,
+   "lng": 127.1172217,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "곰말다리",
+   "detail": "4경비실 앞",
+   "lat": 37.5213231,
+   "lng": 127.1172217,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "지구촌공원",
+   "detail": "",
+   "lat": 37.5170922,
+   "lng": 127.121414,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "야생화학습장",
+   "detail": "배드민턴장",
+   "lat": 37.5177456,
+   "lng": 127.1216276,
+   "note": ""
+  },
+  {
+   "type": "음수대",
+   "place": "야생화학습장",
+   "detail": "배드민턴장",
+   "lat": 37.5177898,
+   "lng": 127.121585,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "야생화학습장",
+   "detail": "배드민턴장",
+   "lat": 37.5180703,
+   "lng": 127.1219555,
+   "note": ""
+  },
+  {
+   "type": "자판기",
+   "place": "야생화학습장",
+   "detail": "몽촌토성 진입로 앞",
+   "lat": 37.5185001,
+   "lng": 127.1212454,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "야생화학습장",
+   "detail": "몽촌토성 진입로 앞",
+   "lat": 37.5185923,
+   "lng": 127.1211763,
+   "note": ""
+  },
+  {
+   "type": "자판기",
+   "place": "곰말다리",
+   "detail": "",
+   "lat": 37.5212284,
+   "lng": 127.1177776,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "곰말다리",
+   "detail": "",
+   "lat": 37.5211774,
+   "lng": 127.1177729,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "음악분수",
+   "detail": "산책로 호반의 길",
+   "lat": 37.5204402,
+   "lng": 127.1178142,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "음악분수",
+   "detail": "산책로 호반의 길",
+   "lat": 37.5199935,
+   "lng": 127.1185793,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "음악분수",
+   "detail": "산책로 호반의 길",
+   "lat": 37.5191814,
+   "lng": 127.1188243,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "음악분수",
+   "detail": "",
+   "lat": 37.5179733,
+   "lng": 127.118944,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "물레방아",
+   "detail": "백제학연구소 부근",
+   "lat": 37.5172595,
+   "lng": 127.1196699,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "평화의 광장",
+   "detail": "career center 입구",
+   "lat": 37.5188471,
+   "lng": 127.1163051,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "평화의 광장",
+   "detail": "career center 입구",
+   "lat": 37.5187264,
+   "lng": 127.1156362,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "평화의 광장",
+   "detail": "sports 360 부근",
+   "lat": 37.5180156,
+   "lng": 127.1158136,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "평화의 광장",
+   "detail": "sports 360 부근",
+   "lat": 37.5181884,
+   "lng": 127.116518,
+   "note": ""
+  },
+  {
+   "type": "간이편의점",
+   "place": "평화의 광장",
+   "detail": "sports 360 부근",
+   "lat": 37.5181203,
+   "lng": 127.1170219,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "평화의 광장",
+   "detail": "career center 뒤",
+   "lat": 37.5193465,
+   "lng": 127.1163108,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "평화의 광장",
+   "detail": "놀이터 맞은편",
+   "lat": 37.5195321,
+   "lng": 127.1163949,
+   "note": ""
+  },
+  {
+   "type": "자판기",
+   "place": "몽촌해자",
+   "detail": "놀이터 맞은편",
+   "lat": 37.5195321,
+   "lng": 127.1163949,
+   "note": ""
+  },
+  {
+   "type": "음수대",
+   "place": "몽촌해자",
+   "detail": "체육진흥공단 본사 부근",
+   "lat": 37.5200366,
+   "lng": 127.1165565,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "몽촌해자",
+   "detail": "",
+   "lat": 37.5198127,
+   "lng": 127.1166712,
+   "note": ""
+  },
+  {
+   "type": "쓰레기통",
+   "place": "들꽃마루",
+   "detail": "",
+   "lat": 37.5129723,
+   "lng": 127.1267228,
+   "note": ""
+  }
+ ],
+ "heat_shelters": [
+  {
+   "kind": "특정계층이용시설",
+   "name": "오륜1단지경로당",
+   "lat": 37.512734,
+   "lng": 127.130346,
+   "dist_from_park_m": 192,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "10:00~15:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "왕천경로당",
+   "lat": 37.511227,
+   "lng": 127.125083,
+   "dist_from_park_m": 242,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~15:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "공공시설",
+   "name": "방이1동주민센터",
+   "lat": 37.511009,
+   "lng": 127.123894,
+   "dist_from_park_m": 332,
+   "facility": "공공청사",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~18:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "공공시설",
+   "name": "잠실4동주민센터",
+   "lat": 37.520113,
+   "lng": 127.112233,
+   "dist_from_park_m": 337,
+   "facility": "공공청사",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~18:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "공공시설",
+   "name": "오륜동주민센터",
+   "lat": 37.515451,
+   "lng": 127.134256,
+   "dist_from_park_m": 350,
+   "facility": "공공청사",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~18:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "파크리오4경로당",
+   "lat": 37.521567,
+   "lng": 127.112676,
+   "dist_from_park_m": 382,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "10:00~15:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "현대백조경로당101동",
+   "lat": 37.509436,
+   "lng": 127.129278,
+   "dist_from_park_m": 397,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "10:00~15:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "쌍용(아)경로당",
+   "lat": 37.526805,
+   "lng": 127.117712,
+   "dist_from_park_m": 407,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "10:00~15:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "풍납극동(아)경로당",
+   "lat": 37.526626,
+   "lng": 127.116736,
+   "dist_from_park_m": 421,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "10:00~15:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "공공시설",
+   "name": "방이2동주민센터",
+   "lat": 37.516397,
+   "lng": 127.111418,
+   "dist_from_park_m": 427,
+   "facility": "공공청사",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~18:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "현대백조경로당(102동)",
+   "lat": 37.508996,
+   "lng": 127.128678,
+   "dist_from_park_m": 436,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "10:00~15:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "올림픽파크한양수자인경로당",
+   "lat": 37.526747,
+   "lng": 127.128195,
+   "dist_from_park_m": 441,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~18:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "성내3동제2경로당",
+   "lat": 37.524718,
+   "lng": 127.131313,
+   "dist_from_park_m": 453,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~18:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "성내천경로당",
+   "lat": 37.528514,
+   "lng": 127.124039,
+   "dist_from_park_m": 461,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~18:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "생활밀착민간시설",
+   "name": "오륜교회",
+   "lat": 37.522682,
+   "lng": 127.132372,
+   "dist_from_park_m": 481,
+   "facility": "종교시설",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~18:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "생활밀착민간시설",
+   "name": "강동인애가한방병원",
+   "lat": 37.528828,
+   "lng": 127.122974,
+   "dist_from_park_m": 483,
+   "facility": "의료시설",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~18:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "오륜2단지경로당",
+   "lat": 37.512815,
+   "lng": 127.133664,
+   "dist_from_park_m": 484,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "10:00~15:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "잠실올림픽공원아이파크경로당",
+   "lat": 37.525452,
+   "lng": 127.114202,
+   "dist_from_park_m": 486,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "10:00~15:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "몽촌경로당",
+   "lat": 37.514642,
+   "lng": 127.112288,
+   "dist_from_park_m": 487,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "10:00~15:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "생활밀착민간시설",
+   "name": "기업은행강동구청역지점",
+   "lat": 37.529055,
+   "lng": 127.123424,
+   "dist_from_park_m": 511,
+   "facility": "금융기관",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~16:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "대림(아)경로당",
+   "lat": 37.508398,
+   "lng": 127.125276,
+   "dist_from_park_m": 512,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "10:00~15:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "생활밀착민간시설",
+   "name": "농협서울영업본부점",
+   "lat": 37.528982,
+   "lng": 127.120433,
+   "dist_from_park_m": 541,
+   "facility": "금융기관",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~16:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "힐데스하임올림픽파크아파트경로당",
+   "lat": 37.524096,
+   "lng": 127.132929,
+   "dist_from_park_m": 556,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~18:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "파크리오3경로당",
+   "lat": 37.521993,
+   "lng": 127.110576,
+   "dist_from_park_m": 571,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "10:00~15:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "성내1동경로당",
+   "lat": 37.529452,
+   "lng": 127.126538,
+   "dist_from_park_m": 618,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~18:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "오륜3단지경로당",
+   "lat": 37.516696,
+   "lng": 127.13772,
+   "dist_from_park_m": 624,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "10:00~15:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "생활밀착민간시설",
+   "name": "국민은행강동구청역지점",
+   "lat": 37.530149,
+   "lng": 127.12186,
+   "dist_from_park_m": 635,
+   "facility": "금융기관",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~16:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "공공시설",
+   "name": "강동구청",
+   "lat": 37.530169,
+   "lng": 127.123814,
+   "dist_from_park_m": 638,
+   "facility": "공공청사",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~18:00",
+   "weekend_extra": true
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "풍납현대경로당",
+   "lat": 37.5294,
+   "lng": 127.118935,
+   "dist_from_park_m": 640,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "10:00~15:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "백토경로당",
+   "lat": 37.508208,
+   "lng": 127.132581,
+   "dist_from_park_m": 650,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "10:00~15:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "공공시설",
+   "name": "성내3동주민센터",
+   "lat": 37.526042,
+   "lng": 127.132886,
+   "dist_from_park_m": 651,
+   "facility": "공공청사",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~18:00",
+   "weekend_extra": true
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "파크리오2경로당",
+   "lat": 37.520951,
+   "lng": 127.108701,
+   "dist_from_park_m": 660,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "10:00~15:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "생활밀착민간시설",
+   "name": "신한은행둔촌동지점",
+   "lat": 37.523839,
+   "lng": 127.134294,
+   "dist_from_park_m": 665,
+   "facility": "금융기관",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~16:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "공공시설",
+   "name": "성내1동주민센터",
+   "lat": 37.530479,
+   "lng": 127.122458,
+   "dist_from_park_m": 667,
+   "facility": "공공청사",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~18:00",
+   "weekend_extra": true
+  },
+  {
+   "kind": "공공시설",
+   "name": "풍납종합사회복지관",
+   "lat": 37.527745,
+   "lng": 127.113891,
+   "dist_from_park_m": 669,
+   "facility": "복지?문화?체육시설",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~18:00",
+   "weekend_extra": true
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "코오롱(아)경로당",
+   "lat": 37.507845,
+   "lng": 127.122659,
+   "dist_from_park_m": 671,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "10:00~15:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "생활밀착민간시설",
+   "name": "우리은행강동구청지점",
+   "lat": 37.530484,
+   "lng": 127.12364,
+   "dist_from_park_m": 671,
+   "facility": "금융기관",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~16:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "생활밀착민간시설",
+   "name": "기업은행둔촌동개인스마트",
+   "lat": 37.523994,
+   "lng": 127.134362,
+   "dist_from_park_m": 675,
+   "facility": "금융기관",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~16:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "공공시설",
+   "name": "풍납2동주민센터",
+   "lat": 37.529296,
+   "lng": 127.115645,
+   "dist_from_park_m": 731,
+   "facility": "공공청사",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~18:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "해모로경로당",
+   "lat": 37.529936,
+   "lng": 127.117153,
+   "dist_from_park_m": 757,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "10:00~15:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "오금현대경로당",
+   "lat": 37.505977,
+   "lng": 127.126416,
+   "dist_from_park_m": 759,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "10:00~15:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "파크리오1경로당",
+   "lat": 37.520278,
+   "lng": 127.106854,
+   "dist_from_park_m": 794,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "10:00~15:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "선린공원경로당",
+   "lat": 37.52836,
+   "lng": 127.132812,
+   "dist_from_park_m": 824,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~18:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "송파현대힐스테이트경로당",
+   "lat": 37.53125,
+   "lng": 127.118802,
+   "dist_from_park_m": 830,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "10:00~15:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "토성경로당",
+   "lat": 37.531574,
+   "lng": 127.119582,
+   "dist_from_park_m": 837,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~18:00",
+   "weekend_extra": true
+  },
+  {
+   "kind": "공공시설",
+   "name": "중앙도서관",
+   "lat": 37.52433,
+   "lng": 127.136263,
+   "dist_from_park_m": 846,
+   "facility": "복지?문화?체육시설",
+   "days": "화,수,목,금",
+   "hours": "09:00~18:00",
+   "weekend_extra": true
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "한양3차(아)경로당",
+   "lat": 37.505721,
+   "lng": 127.123025,
+   "dist_from_park_m": 861,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "10:00~15:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "공공시설",
+   "name": "둔촌1동주민센터",
+   "lat": 37.523421,
+   "lng": 127.136695,
+   "dist_from_park_m": 867,
+   "facility": "공공청사",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~18:00",
+   "weekend_extra": true
+  },
+  {
+   "kind": "생활밀착민간시설",
+   "name": "KEB하나은행둔촌역지점",
+   "lat": 37.526663,
+   "lng": 127.135336,
+   "dist_from_park_m": 869,
+   "facility": "금융기관",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~16:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "생활밀착민간시설",
+   "name": "강동농협둔촌역지점",
+   "lat": 37.526721,
+   "lng": 127.135362,
+   "dist_from_park_m": 874,
+   "facility": "금융기관",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~16:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "송파레미니스1단지경로당",
+   "lat": 37.507691,
+   "lng": 127.135683,
+   "dist_from_park_m": 879,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "10:00~15:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "생활밀착민간시설",
+   "name": "서울강동새마을금고성내지점",
+   "lat": 37.530781,
+   "lng": 127.129984,
+   "dist_from_park_m": 885,
+   "facility": "금융기관",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~16:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "풍산경로당",
+   "lat": 37.531159,
+   "lng": 127.116685,
+   "dist_from_park_m": 899,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "10:00~15:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "한강극동(아)경로당",
+   "lat": 37.529591,
+   "lng": 127.112349,
+   "dist_from_park_m": 914,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "10:00~15:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "둔촌역청구(아)경로당",
+   "lat": 37.529411,
+   "lng": 127.133155,
+   "dist_from_park_m": 934,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~18:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "공공시설",
+   "name": "송파구청",
+   "lat": 37.514614,
+   "lng": 127.106089,
+   "dist_from_park_m": 937,
+   "facility": "공공청사",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~18:00",
+   "weekend_extra": true
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "안말경로당",
+   "lat": 37.531459,
+   "lng": 127.129927,
+   "dist_from_park_m": 946,
+   "facility": "회원이용시설",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~18:00",
+   "weekend_extra": false
+  },
+  {
+   "kind": "공공시설",
+   "name": "성내종합사회복지관",
+   "lat": 37.532179,
+   "lng": 127.129321,
+   "dist_from_park_m": 991,
+   "facility": "복지?문화?체육시설",
+   "days": "월,화,수,목,금",
+   "hours": "09:00~18:00",
+   "weekend_extra": false
+  }
+ ],
+ "cold_shelters": [
+  {
+   "kind": "특정계층이용시설",
+   "name": "왕천경로당",
+   "lat": 37.511227,
+   "lng": 127.125083,
+   "dist_from_park_m": 242,
+   "facility": "회원이용시설",
+   "who": "특정인",
+   "note": "경보 발효시 운영, 설 연휴(2.16.~2.18. 미운영)"
+  },
+  {
+   "kind": "공공시설",
+   "name": "방이1동주민센터",
+   "lat": 37.511009,
+   "lng": 127.123894,
+   "dist_from_park_m": 332,
+   "facility": "공공청사",
+   "who": "누구나",
+   "note": "설 연휴(2.16.~2.18. 미운영)"
+  },
+  {
+   "kind": "공공시설",
+   "name": "잠실4동주민센터",
+   "lat": 37.520113,
+   "lng": 127.112233,
+   "dist_from_park_m": 337,
+   "facility": "공공청사",
+   "who": "누구나",
+   "note": "설 연휴(2.16.~2.18. 미운영)"
+  },
+  {
+   "kind": "공공시설",
+   "name": "오륜동주민센터",
+   "lat": 37.515451,
+   "lng": 127.134256,
+   "dist_from_park_m": 350,
+   "facility": "공공청사",
+   "who": "누구나",
+   "note": "설 연휴(2.16.~2.18. 미운영)"
+  },
+  {
+   "kind": "공공시설",
+   "name": "방이2동주민센터",
+   "lat": 37.516397,
+   "lng": 127.111418,
+   "dist_from_park_m": 427,
+   "facility": "공공청사",
+   "who": "누구나",
+   "note": "설 연휴(2.16.~2.18. 미운영)"
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "성내3동제2경로당",
+   "lat": 37.524718,
+   "lng": 127.131313,
+   "dist_from_park_m": 453,
+   "facility": "회원이용시설",
+   "who": "특정인",
+   "note": "한파경보 발효 시 운영, 1/1(금) 미운영, 2/6(토)~2/9(화) 미운영"
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "성내천경로당",
+   "lat": 37.528514,
+   "lng": 127.124039,
+   "dist_from_park_m": 461,
+   "facility": "회원이용시설",
+   "who": "특정인",
+   "note": "한파경보 발효 시 운영, 1/1(금) 미운영, 2/6(토)~2/9(화) 미운영"
+  },
+  {
+   "kind": "생활밀착민간시설",
+   "name": "오륜교회",
+   "lat": 37.522682,
+   "lng": 127.132372,
+   "dist_from_park_m": 481,
+   "facility": "종교시설",
+   "who": "누구나",
+   "note": "민간자율 참여시설"
+  },
+  {
+   "kind": "생활밀착민간시설",
+   "name": "강동인애가한방병원",
+   "lat": 37.528828,
+   "lng": 127.122974,
+   "dist_from_park_m": 483,
+   "facility": "의료시설",
+   "who": "누구나",
+   "note": "시설 운영시간 내 쉼터 탄력적 운영(공휴일 등 미운영)"
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "몽촌경로당",
+   "lat": 37.514642,
+   "lng": 127.112288,
+   "dist_from_park_m": 487,
+   "facility": "회원이용시설",
+   "who": "특정인",
+   "note": "경보 발효시 운영, 설 연휴(2.16.~2.18. 미운영)"
+  },
+  {
+   "kind": "생활밀착민간시설",
+   "name": "기업은행강동구청역지점",
+   "lat": 37.529055,
+   "lng": 127.123424,
+   "dist_from_park_m": 511,
+   "facility": "금융기관",
+   "who": "누구나",
+   "note": "민간자율 참여시설 시설 운영시간 내 쉼터 탄력적 운영(공휴일 등 미운영)"
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "성내1동경로당",
+   "lat": 37.529452,
+   "lng": 127.126538,
+   "dist_from_park_m": 618,
+   "facility": "회원이용시설",
+   "who": "특정인",
+   "note": "한파경보 발효 시 운영, 1/1(금) 미운영, 2/6(토)~2/9(화) 미운영"
+  },
+  {
+   "kind": "생활밀착민간시설",
+   "name": "국민은행강동구청역지점",
+   "lat": 37.530149,
+   "lng": 127.12186,
+   "dist_from_park_m": 635,
+   "facility": "금융기관",
+   "who": "누구나",
+   "note": "민간자율 참여시설 시설 운영시간 내 쉼터 탄력적 운영(공휴일 등 미운영)"
+  },
+  {
+   "kind": "공공시설",
+   "name": "강동구청",
+   "lat": 37.530169,
+   "lng": 127.123814,
+   "dist_from_park_m": 638,
+   "facility": "공공청사",
+   "who": "누구나",
+   "note": "특보시에만 24시간 운영 응급대피소(특보시 24시간 운영)는 구청 서관 다목적체육관에 위치"
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "백토경로당",
+   "lat": 37.508208,
+   "lng": 127.132581,
+   "dist_from_park_m": 650,
+   "facility": "회원이용시설",
+   "who": "특정인",
+   "note": "경보 발효시 운영, 설 연휴(2.16.~2.18. 미운영)"
+  },
+  {
+   "kind": "공공시설",
+   "name": "성내3동주민센터",
+   "lat": 37.526042,
+   "lng": 127.132886,
+   "dist_from_park_m": 651,
+   "facility": "공공청사",
+   "who": "누구나",
+   "note": ""
+  },
+  {
+   "kind": "공공시설",
+   "name": "성내1동주민센터",
+   "lat": 37.530479,
+   "lng": 127.122458,
+   "dist_from_park_m": 667,
+   "facility": "공공청사",
+   "who": "누구나",
+   "note": ""
+  },
+  {
+   "kind": "생활밀착민간시설",
+   "name": "기업은행둔촌동개인스마트",
+   "lat": 37.523994,
+   "lng": 127.134362,
+   "dist_from_park_m": 675,
+   "facility": "금융기관",
+   "who": "누구나",
+   "note": "민간자율 참여시설 시설 운영시간 내 쉼터 탄력적 운영(공휴일 등 미운영)"
+  },
+  {
+   "kind": "공공시설",
+   "name": "풍납2동주민센터",
+   "lat": 37.529296,
+   "lng": 127.115645,
+   "dist_from_park_m": 731,
+   "facility": "공공청사",
+   "who": "누구나",
+   "note": "설 연휴(2.16.~2.18. 미운영)"
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "선린공원경로당",
+   "lat": 37.52836,
+   "lng": 127.132812,
+   "dist_from_park_m": 824,
+   "facility": "회원이용시설",
+   "who": "특정인",
+   "note": "한파경보 발효 시 운영, 1/1(금) 미운영, 2/6(토)~2/9(화) 미운영"
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "토성경로당",
+   "lat": 37.531574,
+   "lng": 127.119582,
+   "dist_from_park_m": 837,
+   "facility": "회원이용시설",
+   "who": "특정인",
+   "note": "경보 발효시 운영, 설 연휴(2.16.~2.18. 미운영)"
+  },
+  {
+   "kind": "공공시설",
+   "name": "중앙도서관",
+   "lat": 37.52433,
+   "lng": 127.136263,
+   "dist_from_park_m": 846,
+   "facility": "복지?문화?체육시설",
+   "who": "누구나",
+   "note": "정기휴관일(월) 및 공휴일 미운영"
+  },
+  {
+   "kind": "공공시설",
+   "name": "둔촌1동주민센터",
+   "lat": 37.523421,
+   "lng": 127.136695,
+   "dist_from_park_m": 867,
+   "facility": "공공청사",
+   "who": "누구나",
+   "note": ""
+  },
+  {
+   "kind": "공공시설",
+   "name": "송파구청",
+   "lat": 37.514614,
+   "lng": 127.106089,
+   "dist_from_park_m": 937,
+   "facility": "공공청사",
+   "who": "누구나",
+   "note": "한파특보시 평일/휴일 구분없이 24시간 운영(해제시까지)"
+  },
+  {
+   "kind": "특정계층이용시설",
+   "name": "안말경로당",
+   "lat": 37.531459,
+   "lng": 127.129927,
+   "dist_from_park_m": 946,
+   "facility": "회원이용시설",
+   "who": "특정인",
+   "note": "한파경보 발효 시 운영, 1/1(금) 미운영, 2/6(토)~2/9(화) 미운영"
+  }
+ ],
+ "wheelchair_chargers": [
+  {
+   "name": "올림픽공원역",
+   "detail": "5호선 올림픽공원역 지하1층 아이센터 옆",
+   "lat": 37.51688685,
+   "lng": 127.1309178,
+   "dist_from_park_m": 28,
+   "weekday": "05:00~23:00",
+   "holiday": "05:00~23:00",
+   "slots": 1
+  },
+  {
+   "name": "올림픽공원역",
+   "detail": "올림픽공원역 지하 1층 편의점 물품보관함 옆",
+   "lat": 37.516887,
+   "lng": 127.130919,
+   "dist_from_park_m": 28,
+   "weekday": "05:00~23:00",
+   "holiday": "05:00~23:00",
+   "slots": 2
+  },
+  {
+   "name": "한성백제역",
+   "detail": "한성백제역 지하 1층 편의점 옆",
+   "lat": 37.5164648,
+   "lng": 127.1163033,
+   "dist_from_park_m": 103,
+   "weekday": "05:00~23:00",
+   "holiday": "05:00~23:00",
+   "slots": 2
+  },
+  {
+   "name": "몽촌토성역",
+   "detail": "몽촌토성역 지하 2층 고객상담실 옆",
+   "lat": 37.517623,
+   "lng": 127.112428,
+   "dist_from_park_m": 302,
+   "weekday": "05:00~23:00",
+   "holiday": "05:00~23:00",
+   "slots": 1
+  },
+  {
+   "name": "잠실4동주민센터",
+   "detail": "주민센터 1층",
+   "lat": 37.5201653,
+   "lng": 127.112235,
+   "dist_from_park_m": 340,
+   "weekday": "09:00~17:00",
+   "holiday": "00:00~00:00",
+   "slots": 1
+  },
+  {
+   "name": "오륜동주민센터",
+   "detail": "주민센터 1층",
+   "lat": 37.51555725,
+   "lng": 127.134274,
+   "dist_from_park_m": 347,
+   "weekday": "09:00~17:00",
+   "holiday": "00:00~00:00",
+   "slots": 1
+  },
+  {
+   "name": "강동구청",
+   "detail": "제2청사 입구",
+   "lat": 37.53016097,
+   "lng": 127.123769,
+   "dist_from_park_m": 637,
+   "weekday": "00:00~23:59",
+   "holiday": "00:00~23:59",
+   "slots": 2
+  },
+  {
+   "name": "강동구청역",
+   "detail": "안내데스크 맞은편",
+   "lat": 37.53067409,
+   "lng": 127.1205761,
+   "dist_from_park_m": 715,
+   "weekday": "05:00~23:59",
+   "holiday": "05:00~23:59",
+   "slots": 2
+  },
+  {
+   "name": "송파나루역",
+   "detail": "송파나루역 지하 1층 민원발급기 옆",
+   "lat": 37.5104581,
+   "lng": 127.1127441,
+   "dist_from_park_m": 796,
+   "weekday": "05:00~23:00",
+   "holiday": "05:00~23:00",
+   "slots": 2
+  },
+  {
+   "name": "아산병원",
+   "detail": "아산병원 동관 후문 옆",
+   "lat": 37.525158,
+   "lng": 127.109526,
+   "dist_from_park_m": 802,
+   "weekday": "04:00~23:59",
+   "holiday": "04:00~23:59",
+   "slots": 2
+  },
+  {
+   "name": "송파구청",
+   "detail": "송파구청 1층 종합상황실 옆",
+   "lat": 37.514476,
+   "lng": 127.105859,
+   "dist_from_park_m": 962,
+   "weekday": "09:00~22:00",
+   "holiday": "09:00~22:00",
+   "slots": 2
+  }
+ ],
+ "subway_elevators": [
+  {
+   "station": "몽촌토성(평화의문)",
+   "lat": 37.5176243275448,
+   "lng": 127.11218692416507
+  },
+  {
+   "station": "한성백제",
+   "lat": 37.51608521047556,
+   "lng": 127.115452186766
+  },
+  {
+   "station": "올림픽공원(한국체대)",
+   "lat": 37.516040328917775,
+   "lng": 127.13120675007835
+  },
+  {
+   "station": "올림픽공원(한국체대)",
+   "lat": 37.516538146120155,
+   "lng": 127.13086140464432
+  },
+  {
+   "station": "한성백제",
+   "lat": 37.51686754955193,
+   "lng": 127.11580391281615
+  },
+  {
+   "station": "올림픽공원(한국체대)",
+   "lat": 37.515968021653165,
+   "lng": 127.13111036762389
+  }
+ ],
+ "aed": [
+  {
+   "name": "한국체육산업개발(주)",
+   "detail": "올림픽공원 체조경기장 지하1층 헬스장",
+   "lat": 37.5198533302,
+   "lng": 127.1168072549
+  },
+  {
+   "name": "한국체육산업개발(주)",
+   "detail": "테니스경기장  2-2문 내부 좌측",
+   "lat": 37.5157324953,
+   "lng": 127.1286098592
+  },
+  {
+   "name": "한국체육산업개발(주)",
+   "detail": "KSPO돔 지하1층  탁구장 우측",
+   "lat": 37.5190676091,
+   "lng": 127.1273147224
+  },
+  {
+   "name": "9호선 올림픽공원역",
+   "detail": "올림픽공원역 B1 고객안전실 옆",
+   "lat": 37.5160876492,
+   "lng": 127.1306001408
+  },
+  {
+   "name": "한국체육산업개발(주)",
+   "detail": "KSPO돔 1-3문  내부 죄측",
+   "lat": 37.5187428213,
+   "lng": 127.127710083
+  },
+  {
+   "name": "5호선 올림픽공원역",
+   "detail": "5호선 올림픽공원역 역무실 앞",
+   "lat": 37.5160559611,
+   "lng": 127.1306045085
+  },
+  {
+   "name": "한국체육산업개발(주)",
+   "detail": "실내테니스장 정문  내부 회원안내실 안",
+   "lat": 37.5136245451,
+   "lng": 127.1282442896
+  },
+  {
+   "name": "한국체육산업개발(주)",
+   "detail": "중앙공급실 1층 정문  내부 앞",
+   "lat": 37.5155252142,
+   "lng": 127.1222949718
+  },
+  {
+   "name": "한국체육산업개발(주)",
+   "detail": "K아트홀 정문  내부 좌측",
+   "lat": 37.5135145433,
+   "lng": 127.1265392215
+  },
+  {
+   "name": "한국체육산업개발(주)",
+   "detail": "핸드볼경기장  1-1문 내부 좌측",
+   "lat": 37.5169422001,
+   "lng": 127.1264231579
+  },
+  {
+   "name": "한국체육산업개발(주)",
+   "detail": "수영장 1층 수영장 내 양호실 좌측",
+   "lat": 37.5208526596,
+   "lng": 127.1263222905
+  },
+  {
+   "name": "소마미술관",
+   "detail": "1관 입구",
+   "lat": 37.5169206551,
+   "lng": 127.1181669647
+  },
+  {
+   "name": "9호선 한성백제역",
+   "detail": "한성백제역 지하1층 고객안전실 앞 오른쪽 벽면",
+   "lat": 37.5161955099,
+   "lng": 127.1165527026
+  },
+  {
+   "name": "한국체육산업개발(주)",
+   "detail": "만남의 광장  경비초소 안",
+   "lat": 37.520339698,
+   "lng": 127.1155178766
+  },
+  {
+   "name": "한국체육산업개발(주)",
+   "detail": "평화의 광장  경비초소 안",
+   "lat": 37.520339698,
+   "lng": 127.1155178766
+  },
+  {
+   "name": "한국체육산업개발(주)",
+   "detail": "우리금융아트홀 1층 정문 내부 우측",
+   "lat": 37.520339698,
+   "lng": 127.1155178766
+  },
+  {
+   "name": "한국체육산업개발(주)",
+   "detail": "올림픽홀 경비사무실 내(뮤즈라이브 좌측)",
+   "lat": 37.520339698,
+   "lng": 127.1155178766
+  },
+  {
+   "name": "한국체육산업개발(주)",
+   "detail": "수영장 1층 헬스장  정문 내부 우측",
+   "lat": 37.520339698,
+   "lng": 127.1155178766
+  },
+  {
+   "name": "대한체육회",
+   "detail": "올림픽회관 본관 7층",
+   "lat": 37.520339698,
+   "lng": 127.1155178766
+  },
+  {
+   "name": "대한체육회",
+   "detail": "올림픽회관 신관 1층",
+   "lat": 37.5207286916,
+   "lng": 127.1158391606
+  },
+  {
+   "name": "한국스포츠과학원",
+   "detail": "운동생리학 실험실",
+   "lat": 37.5143116927,
+   "lng": 127.1260284871
+  },
+  {
+   "name": "한국체육산업개발(주)",
+   "detail": "우리금융아트홀 공연장  1층 내부 GATE3 앞",
+   "lat": 37.5165292384,
+   "lng": 127.1250141858
+  },
+  {
+   "name": "대한체육회",
+   "detail": "올림픽회관 본관 1층",
+   "lat": 37.5204321052,
+   "lng": 127.1155013073
+  },
+  {
+   "name": "한국체육산업개발(주)",
+   "detail": "벨로드롬 회원안내실 내부",
+   "lat": 37.5163417763,
+   "lng": 127.1233510943
+  },
+  {
+   "name": "한성백제박물관",
+   "detail": "안내데스크옆",
+   "lat": 37.5154287227,
+   "lng": 127.1208007069
+  },
+  {
+   "name": "한국체육산업개발(주)",
+   "detail": "비즈홀 지샘터도서관 내부 좌측",
+   "lat": 37.515913262,
+   "lng": 127.1238650557
+  },
+  {
+   "name": "여성축구장",
+   "detail": "관리사무소",
+   "lat": 37.5244748082,
+   "lng": 127.1174762498
+  },
+  {
+   "name": "한미사이언스",
+   "detail": "1층 로비",
+   "lat": 37.5165925928,
+   "lng": 127.1139562091
+  },
+  {
+   "name": "한미사이언스",
+   "detail": "18층",
+   "lat": 37.5165925928,
+   "lng": 127.1139562091
+  },
+  {
+   "name": "한미약품(주)",
+   "detail": "한미타워 20층",
+   "lat": 37.5165925928,
+   "lng": 127.1139562091
+  },
+  {
+   "name": "㈜한섬성내사옥",
+   "detail": "본관 지하2층 엘리베이터 앞",
+   "lat": 37.5245642268,
+   "lng": 127.1280151531
+  },
+  {
+   "name": "㈜한섬성내사옥",
+   "detail": "본관 1층",
+   "lat": 37.5245642268,
+   "lng": 127.1280151531
+  },
+  {
+   "name": "㈜한섬성내사옥",
+   "detail": "본관 3층 엘리베이터 앞",
+   "lat": 37.5245642268,
+   "lng": 127.1280151531
+  },
+  {
+   "name": "㈜한섬성내사옥",
+   "detail": "본관 5층 엘리베이터 앞",
+   "lat": 37.5245642268,
+   "lng": 127.1280151531
+  },
+  {
+   "name": "㈜한섬성내사옥",
+   "detail": "본관 7층 엘리베이터 앞",
+   "lat": 37.5245642268,
+   "lng": 127.1280151531
+  },
+  {
+   "name": "㈜한섬성내사옥",
+   "detail": "동관 1층 엘리베이터 앞",
+   "lat": 37.5245642268,
+   "lng": 127.1280151531
+  },
+  {
+   "name": "㈜한섬성내사옥",
+   "detail": "동관 3층 엘리베이터 앞",
+   "lat": 37.5245642268,
+   "lng": 127.1280151531
+  },
+  {
+   "name": "㈜한섬성내사옥",
+   "detail": "동관 5층 엘리베이터 앞",
+   "lat": 37.5245642268,
+   "lng": 127.1280151531
+  },
+  {
+   "name": "㈜한섬성내사옥",
+   "detail": "서관 3층 엘리베이터 앞",
+   "lat": 37.5245642268,
+   "lng": 127.1280151531
+  },
+  {
+   "name": "㈜한섬성내사옥",
+   "detail": "서관 5층 엘리베이터 앞",
+   "lat": 37.5245642268,
+   "lng": 127.1280151531
+  },
+  {
+   "name": "㈜한섬성내사옥",
+   "detail": "서관 1층 엘리베이터 앞",
+   "lat": 37.5243998752,
+   "lng": 127.128272461
+  },
+  {
+   "name": "서울방이초등학교",
+   "detail": "1층 중앙현관",
+   "lat": 37.5134391919,
+   "lng": 127.1204725356
+  },
+  {
+   "name": "오금대림아파트",
+   "detail": "노인정",
+   "lat": 37.5106367079,
+   "lng": 127.1287585585
+  },
+  {
+   "name": "(주)우아한형제들",
+   "detail": "2층  출입구 좌측",
+   "lat": 37.5169244928,
+   "lng": 127.1127666298
+  }
+ ],
+ "parking_pattern": {
+  "source": "한국체육산업개발 올림픽공원 입출차 정보 (2024년 7월)",
+  "meaning": "매 정시 기준 주차장 안에 있던 차량 수의 평일·주말 시각별 평균 (출차가 입차보다 늦고 머문 시간 2일 미만인 기록만 사용)",
+  "hourly": {
+   "weekday": [
+    32.5,
+    30.8,
+    29.8,
+    30.0,
+    32.8,
+    50.8,
+    376.4,
+    595.4,
+    465.3,
+    666.7,
+    919.2,
+    964.2,
+    741.0,
+    562.8,
+    674.4,
+    712.6,
+    661.3,
+    567.6,
+    540.8,
+    569.7,
+    630.4,
+    598.9,
+    278.9,
+    49.7
+   ],
+   "weekend": [
+    53.2,
+    49.2,
+    48.1,
+    47.0,
+    46.9,
+    51.1,
+    77.0,
+    122.1,
+    178.1,
+    425.5,
+    672.5,
+    846.5,
+    841.5,
+    710.1,
+    842.4,
+    1006.2,
+    1090.9,
+    1200.8,
+    1029.9,
+    863.9,
+    761.9,
+    453.0,
+    158.5,
+    65.9
+   ]
+  },
+  "busiest_hours_by_day": {
+   "월": {
+    "hour": 11,
+    "avg_cars": 943.4
+   },
+   "화": {
+    "hour": 11,
+    "avg_cars": 973.4
+   },
+   "수": {
+    "hour": 11,
+    "avg_cars": 979.0
+   },
+   "목": {
+    "hour": 11,
+    "avg_cars": 941.0
+   },
+   "금": {
+    "hour": 11,
+    "avg_cars": 983.5
+   },
+   "토": {
+    "hour": 17,
+    "avg_cars": 1209.2
+   },
+   "일": {
+    "hour": 17,
+    "avg_cars": 1192.2
+   }
+  }
+ }
+}

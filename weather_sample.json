@@ -1,0 +1,9 @@
+{
+  "temp": 33,
+  "feelsLike": 33.5,
+  "rain": false,
+  "sky": "맑음",
+  "uv": 8,
+  "baseTime": "2026-07-21 17:00",
+  "missing": []
+}

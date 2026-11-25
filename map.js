@@ -34,6 +34,7 @@
 
   // ───────────────────── 1. 설정값 ─────────────────────
   const DATA_URL = 'data/olympic_park_data.json';
+  const WALK_GRAPH_URL = 'data/walk_graph.json';  // 걷는 길 그래프(OpenStreetMap). tools/build_walk_graph.py로 만든다
   const MOCK_URL = 'mock_data.js';             // ?demo 일 때만 불러오는 가상 데이터
   const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
   const FALLBACK_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -339,6 +340,7 @@
     destEntries: [],     // 가고 싶은 곳 목록에 들어간 마커들
     destTarget: null,    // 목록에서 직접 고른 목적지 ('위도,경도'). 없으면 1순위로 길안내
     lastDest: 'all',
+    walk: null,          // 걷는 길 그래프 (불러오면 길안내 선이 길을 따라간다. 없으면 직선)
   };
 
   const ll = (lat, lng) => [lng, lat]; // MapLibre는 [경도, 위도] 순서다(Leaflet과 반대!)
@@ -583,7 +585,7 @@ ${kindVars}
     legend.className = 'op-legend';
     legend.innerHTML = '<div><i class="route"></i>추천 동선: 들를 곳 순서(상황을 고르면 보여요)</div><div><i></i>추천 화장실까지 연결</div>' +
       '<div><i class="ring"></i>기준 위치에서 도보 ' + WALK_RING_MIN + '분 범위(가정 속도)</div>' +
-      '<div><b>선은 모두 직선이에요. 실제 길은 더 멀거나 계단이 있을 수 있어요.</b></div>' +
+      '<div><b>동선 선은 OpenStreetMap 걷는 길을 따라가요(경사·공사 미반영). 화장실 연결선은 직선이에요.</b></div>' +
       '<div>지도를 누르거나 ● 기준 핀을 끌어 기준 위치를 바꿀 수 있어요.</div>';
     body.appendChild(legend);
     div.append(btn, body);
@@ -1048,7 +1050,7 @@ ${kindVars}
       else missing.push(label + (routeCandidates(n, profiles, now, true).length ? ' (지금 운영 안 함)' : ' (근처 정보 없음)'));
     });
     const speed = walkSpeed(profiles);
-    const basis = '직선거리 기준 · 분당 ' + speed + 'm 가정 · 실제 길은 더 멀거나 계단이 있을 수 있어요';
+    const basis = (S.walk ? '걷는 길(OpenStreetMap) 기준' : '직선거리 기준') + ' · 분당 ' + speed + 'm 가정';
     const use = groups.slice(0, ROUTE_MAX_STOPS);
     if (!use.length) return { profiles: profiles.slice(), stops: [], totalM: 0, totalMin: 0, speed: speed, missing: missing, basis: basis };
 
@@ -1077,7 +1079,7 @@ ${kindVars}
     // 날씨에 맞는 경유지(물 마실 곳·더위/추위/비 피할 곳)를 덜 돌아가는 자리에 끼워 넣는다
     const wx = weatherRouteInfo(profiles, now);
     const path = best.stops.map((s) => ({ e: s.e, need: s.g.need, label: s.g.label }));
-    insertWeatherStop(path, wx);
+    insertWeatherStop(path, wx, profiles);
     return buildPlan(path, {
       profiles: profiles, speed: speed, missing: missing, basis: basis,
       title: '추천 동선', weather: wx,
@@ -1088,17 +1090,34 @@ ${kindVars}
   function buildPlan(path, o) {
     let pos = S.origin;
     let total = 0;
+    const geometry = [[S.origin.lat, S.origin.lng]];
+    let allPath = path.length > 0;
+    let stepsUsed = false;
     const stops = path.map((x, i) => {
-      const d = haversine(pos.lat, pos.lng, x.e.item.lat, x.e.item.lng);
+      // 걷는 길 그래프가 있으면 길을 따라 재고, 없거나 길에서 너무 멀면 직선으로 잰다
+      const leg = walkLeg(pos, x.e.item, o.profiles);
+      const d = leg ? leg.meters : haversine(pos.lat, pos.lng, x.e.item.lat, x.e.item.lng);
+      if (leg) {
+        leg.coords.slice(1).forEach((c) => geometry.push(c));
+        if (leg.steps) stepsUsed = true;
+      } else {
+        allPath = false;
+        geometry.push([x.e.item.lat, x.e.item.lng]);
+      }
       total += d;
       pos = x.e.item;
       return {
         step: i + 1, need: x.need, label: x.label, name: entryName(x.e),
         lat: x.e.item.lat, lng: x.e.item.lng, legM: Math.round(d), legMin: Math.max(1, Math.round(d / o.speed)),
+        legPath: !!leg,       // true: 걷는 길 기준, false: 직선
       };
     });
     S.routeEntries = path.map((x) => x.e);
     const wx = o.weather || {};
+    const pathNotes = [];
+    const avoid = stepsMode(o.profiles) === 'avoid';
+    if (stepsUsed && avoid) pathNotes.push('계단 없는 길을 찾지 못해 계단이 있는 구간이 들어갔어요. 현장 안내를 확인하세요.');
+    if (stops.some((x) => x.legPath) && !allPath) pathNotes.push('일부 구간은 길 데이터가 없어 직선으로 표시했어요.');
     return {
       profiles: o.profiles.slice(),
       title: o.title,                 // '추천 동선' 또는 '길안내' (ui.js가 제목으로 씀)
@@ -1111,7 +1130,161 @@ ${kindVars}
       basis: o.basis,
       weatherKind: wx.kind || null,   // 'hot' | 'cold' | 'rain' | null
       weatherNotes: wx.notes || [],   // 날씨 때문에 바꾼 점·주의할 점
+      pathBased: allPath,             // true면 모든 구간이 걷는 길(OpenStreetMap) 기준
+      geometry: geometry,             // 지도에 그릴 선 [[위도, 경도], ...]
+      pathNotes: pathNotes,           // 길 관련 주의(계단 등)
+      stepsAvoided: avoid && !stepsUsed,
     };
+  }
+
+  // ───────────────────── 10-4. 걷는 길 따라 길찾기 [팀원1 추가] ─────────────────────
+  // data/walk_graph.json: OpenStreetMap의 보도·산책로·계단·다리를 점(n)과 선(e)으로 만든 그래프.
+  // 시설 위치에서 가장 가까운 길 위의 점으로 붙인 뒤 A* 알고리즘으로 가장 짧은 길을 찾는다.
+  // 휠체어·유아차는 계단을 피하고, 오래 못 걷는 동행·임산부는 계단을 3배 길게 쳐서 되도록 피한다.
+  const SNAP_MAX_M = 200;      // 시설에서 이보다 먼 길밖에 없으면 그 구간은 직선으로 (가정값)
+  const STEP_SLOW_FACTOR = 3;
+
+  function stepsMode(profiles) {
+    profiles = profiles || [];
+    if (profiles.includes('wheelchair') || profiles.includes('stroller')) return 'avoid';
+    if (profiles.includes('elderly') || profiles.includes('pregnant')) return 'slow';
+    return 'normal';
+  }
+
+  function buildWalkGraph(j) {
+    const N = j.n.length / 2;
+    const lat = new Float64Array(N);
+    const lng = new Float64Array(N);
+    for (let i = 0; i < N; i++) { lat[i] = j.n[2 * i] / 1e6; lng[i] = j.n[2 * i + 1] / 1e6; }
+    const deg = new Int32Array(N + 1);
+    j.e.forEach((e) => { deg[e[0] + 1]++; deg[e[1] + 1]++; });
+    for (let i = 0; i < N; i++) deg[i + 1] += deg[i];
+    const M = deg[N];
+    const to = new Int32Array(M);
+    const len = new Float32Array(M);
+    const step = new Uint8Array(M);
+    const fill = deg.slice(0, N);
+    j.e.forEach((e) => {
+      const a = e[0], b = e[1], st = e[2] === 1 ? 1 : 0;
+      const m = haversine(lat[a], lng[a], lat[b], lng[b]);
+      let k = fill[a]++; to[k] = b; len[k] = m; step[k] = st;
+      k = fill[b]++; to[k] = a; len[k] = m; step[k] = st;
+    });
+    return { N: N, lat: lat, lng: lng, off: deg, to: to, len: len, step: step, snapCache: new Map(), legCache: new Map() };
+  }
+
+  function loadWalkGraph() {
+    fetch(WALK_GRAPH_URL, { cache: 'no-cache' })
+      .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then((j) => {
+        S.walk = buildWalkGraph(j);
+        if (S.data && S.origin) recompute();
+      })
+      .catch((err) => console.warn('[map.js] 걷는 길 데이터를 못 불러와 길안내를 직선으로 보여 줘요:', err));
+  }
+
+  // 가장 가까운 길 위의 점
+  function snapNode(p) {
+    const W = S.walk;
+    const key = p.lat + ',' + p.lng;
+    if (W.snapCache.has(key)) return W.snapCache.get(key);
+    let best = -1;
+    let bestD = Infinity;
+    const cosLat = Math.cos(p.lat * Math.PI / 180);
+    for (let i = 0; i < W.N; i++) {
+      const dy = W.lat[i] - p.lat;
+      const dx = (W.lng[i] - p.lng) * cosLat;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < bestD) { bestD = d2; best = i; }
+    }
+    const res = best < 0 ? null : { i: best, m: haversine(p.lat, p.lng, W.lat[best], W.lng[best]) };
+    W.snapCache.set(key, res);
+    return res;
+  }
+
+  // A* 가장 짧은 길. stepFactor: Infinity면 계단 못 지나감
+  function astar(s, t, stepFactor) {
+    const W = S.walk;
+    const g = new Float64Array(W.N).fill(Infinity);
+    const prev = new Int32Array(W.N).fill(-1);
+    const done = new Uint8Array(W.N);
+    const h = (i) => haversine(W.lat[i], W.lng[i], W.lat[t], W.lng[t]);
+    const heap = [];     // [f, node]
+    const push = (f, n) => {
+      heap.push([f, n]);
+      let i = heap.length - 1;
+      while (i > 0) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; }
+    };
+    const pop = () => {
+      const top = heap[0];
+      const last = heap.pop();
+      if (heap.length) {
+        heap[0] = last;
+        let i = 0;
+        for (;;) {
+          const l = 2 * i + 1, r = l + 1;
+          let m = i;
+          if (l < heap.length && heap[l][0] < heap[m][0]) m = l;
+          if (r < heap.length && heap[r][0] < heap[m][0]) m = r;
+          if (m === i) break;
+          [heap[m], heap[i]] = [heap[i], heap[m]]; i = m;
+        }
+      }
+      return top;
+    };
+    g[s] = 0;
+    push(h(s), s);
+    while (heap.length) {
+      const u = pop()[1];
+      if (done[u]) continue;
+      done[u] = 1;
+      if (u === t) break;
+      for (let k = W.off[u]; k < W.off[u + 1]; k++) {
+        const v = W.to[k];
+        if (done[v]) continue;
+        const w = W.step[k] ? W.len[k] * stepFactor : W.len[k];
+        if (!isFinite(w)) continue;
+        const nd = g[u] + w;
+        if (nd < g[v]) { g[v] = nd; prev[v] = u; push(nd + h(v), v); }
+      }
+    }
+    if (!isFinite(g[t])) return null;
+    const nodes = [];
+    for (let v = t; v !== -1; v = prev[v]) nodes.push(v);
+    nodes.reverse();
+    let meters = 0;
+    let steps = false;
+    for (let i = 1; i < nodes.length; i++) {
+      const a = nodes[i - 1], b = nodes[i];
+      for (let k = W.off[a]; k < W.off[a + 1]; k++) {
+        if (W.to[k] === b) { meters += W.len[k]; if (W.step[k]) steps = true; break; }
+      }
+    }
+    return { nodes: nodes, meters: meters, steps: steps };
+  }
+
+  // 두 지점 사이 걷는 길: { coords: [[위도, 경도], ...], meters, steps } 또는 null(그래프 없음·길에서 너무 멂·이어진 길 없음)
+  function walkLeg(a, b, profiles) {
+    if (!S.walk) return null;
+    const mode = stepsMode(profiles);
+    const ck = a.lat + ',' + a.lng + '>' + b.lat + ',' + b.lng + '|' + mode;
+    if (S.walk.legCache.has(ck)) return S.walk.legCache.get(ck);
+    const res = walkLegRaw(a, b, mode);
+    if (S.walk.legCache.size > 2000) S.walk.legCache.clear();
+    S.walk.legCache.set(ck, res);
+    return res;
+  }
+
+  function walkLegRaw(a, b, mode) {
+    const sa = snapNode(a);
+    const sb = snapNode(b);
+    if (!sa || !sb || sa.m > SNAP_MAX_M || sb.m > SNAP_MAX_M) return null;
+    let r = astar(sa.i, sb.i, mode === 'avoid' ? Infinity : mode === 'slow' ? STEP_SLOW_FACTOR : 1);
+    if (!r && mode === 'avoid') r = astar(sa.i, sb.i, STEP_SLOW_FACTOR);   // 계단 없는 길이 없으면 계단 포함
+    if (!r) return null;
+    const W = S.walk;
+    const coords = [[a.lat, a.lng]].concat(r.nodes.map((i) => [W.lat[i], W.lng[i]]), [[b.lat, b.lng]]);
+    return { coords: coords, meters: sa.m + r.meters + sb.m, steps: r.steps };
   }
 
   // ───────────────────── 10-3. 가고 싶은 곳 + 날씨 맞춤 길안내 [팀원1 추가] ─────────────────────
@@ -1317,11 +1490,13 @@ ${kindVars}
   }
 
   // 경유지 하나를 '덜 돌아가는 자리'에 넣는다. 너무 많이 돌아가야 하면 넣지 않고 안내만 남긴다
-  function insertWeatherStop(path, wx) {
+  function insertWeatherStop(path, wx, profiles) {
     if (!wx.kind || !path.length) return;
     const used = new Set(path.map((x) => x.e));
     const pts = [S.origin].concat(path.map((x) => x.e.item));
-    let best = null;
+    const limitOf = (direct) => Math.min(WEATHER_ROUTE.maxDetourM, Math.max(WEATHER_ROUTE.minDetourM, direct * WEATHER_ROUTE.detourRatio));
+    // 1) 직선으로 덜 돌아가는 후보를 먼저 고르고
+    const near = [];
     wx.cands.forEach((e) => {
       if (used.has(e)) return;
       for (let i = 0; i < pts.length - 1; i++) {
@@ -1329,16 +1504,33 @@ ${kindVars}
         const b = pts[i + 1];
         const direct = haversine(a.lat, a.lng, b.lat, b.lng);
         const extra = haversine(a.lat, a.lng, e.item.lat, e.item.lng) + haversine(e.item.lat, e.item.lng, b.lat, b.lng) - direct;
-        const limit = Math.min(WEATHER_ROUTE.maxDetourM, Math.max(WEATHER_ROUTE.minDetourM, direct * WEATHER_ROUTE.detourRatio));
-        if (extra <= limit && (!best || extra < best.extra)) best = { e: e, at: i, extra: extra };
+        if (extra <= limitOf(direct)) near.push({ e: e, at: i, extra: extra });
       }
     });
+    near.sort((x, y) => x.extra - y.extra);
+    // 2) 걷는 길이 있으면 실제로 걸어서 덜 돌아가는지 다시 잰다 (강·호수 건너편 후보를 거른다)
+    let best = null;
+    if (S.walk) {
+      const legM = (a, b) => { const l = walkLeg(a, b, profiles); return l ? l.meters : null; };
+      near.slice(0, 8).forEach((c) => {
+        const a = pts[c.at];
+        const b = pts[c.at + 1];
+        const direct = legM(a, b);
+        const viaA = legM(a, c.e.item);
+        const viaB = legM(c.e.item, b);
+        if (direct === null || viaA === null || viaB === null) return;
+        const extra = viaA + viaB - direct;
+        if (extra <= limitOf(direct) && (!best || extra < best.extra)) best = { e: c.e, at: c.at, extra: extra };
+      });
+    } else {
+      best = near[0] || null;
+    }
     if (!best) {
       wx.notes.push('가는 길 가까이에 들를 만한 곳이 없어 경유지는 넣지 않았어요.');
       return;
     }
     path.splice(best.at, 0, { e: best.e, need: 'weather', label: wx.labelOf(best.e) });
-    if (best.extra >= 30) wx.notes.push('경유지 때문에 직선으로 약 ' + Math.round(best.extra).toLocaleString() + 'm 더 걸어요.');
+    if (best.extra >= 30) wx.notes.push('경유지 때문에 약 ' + Math.round(best.extra).toLocaleString() + 'm 더 걸어요.');
   }
 
   // 가고 싶은 곳까지 길안내: 목록에서 누른 곳, 없으면 1순위
@@ -1347,7 +1539,7 @@ ${kindVars}
     const profiles = st.profiles || [];
     const d = currentDest();
     const speed = walkSpeed(profiles);
-    const basis = '직선거리 기준 · 분당 ' + speed + 'm 가정 · 실제 길은 더 멀거나 계단이 있을 수 있어요';
+    const basis = (S.walk ? '걷는 길(OpenStreetMap) 기준' : '직선거리 기준') + ' · 분당 ' + speed + 'm 가정';
     const key = (e) => e.item.lat + ',' + e.item.lng;
     const pool = S.destEntries || [];
     let target = S.destTarget ? pool.find((e) => key(e) === S.destTarget) : null;
@@ -1366,7 +1558,7 @@ ${kindVars}
       });
     }
     const path = [{ e: target, need: 'dest', label: label }];
-    insertWeatherStop(path, wx);
+    insertWeatherStop(path, wx, profiles);
     return buildPlan(path, { profiles: profiles, speed: speed, missing: [], basis: basis, title: '길안내', dest: d, weather: wx });
   }
 
@@ -1607,19 +1799,22 @@ ${kindVars}
     });
     const plan = window.routePlan;
     const hasRoute = !!(plan && plan.stops && plan.stops.length);
+    // 걷는 길 그래프가 있으면 길을 따라 그린 선(plan.geometry), 없으면 들를 곳을 잇는 직선
+    const routeCoords = hasRoute ? (plan.geometry && plan.geometry.length > 1 ? plan.geometry.map((c) => ll(c[0], c[1]))
+      : [ll(S.origin.lat, S.origin.lng)].concat(plan.stops.map((x) => ll(x.lat, x.lng)))) : [];
     S.map.getSource('op-route').setData(hasRoute ? {
       type: 'Feature', properties: {},
-      geometry: { type: 'LineString', coordinates: [ll(S.origin.lat, S.origin.lng)].concat(plan.stops.map((x) => ll(x.lat, x.lng))) },
+      geometry: { type: 'LineString', coordinates: routeCoords },
     } : emptyFC());
     // 동선이 있으면 화장실 연결선은 숨겨 지도를 덜 복잡하게
     const dNow = currentDest();
     const hideRecLines = hasRoute || (dNow !== 'all' && dNow !== 'toilet');
     ['op-rec-casing', 'op-rec-line'].forEach((id) => S.map.setLayoutProperty(id, 'visibility', hideRecLines ? 'none' : 'visible'));
     // 들를 곳이 바뀌었을 때만, 기준 위치와 들를 곳이 모두 보이게 지도를 맞춘다
-    const routeKey = hasRoute ? plan.stops.map((x) => x.lat + ',' + x.lng).join('|') : '';
+    const routeKey = hasRoute ? plan.stops.map((x) => x.lat + ',' + x.lng).join('|') + (plan.pathBased ? '|p' : '') : '';
     if (hasRoute && routeKey !== S.lastRouteKey) {
       const b = new maplibregl.LngLatBounds(ll(S.origin.lat, S.origin.lng), ll(S.origin.lat, S.origin.lng));
-      plan.stops.forEach((x) => b.extend(ll(x.lat, x.lng)));
+      routeCoords.forEach((c) => b.extend(c));
       const h = S.map.getContainer().clientHeight;
       S.map.fitBounds(b, {
         padding: { top: Math.round(h * 0.18), bottom: Math.round(h * 0.12), left: 50, right: 70 },
@@ -1830,6 +2025,7 @@ ${kindVars}
       return;
     }
     S.data = got.d;
+    loadWalkGraph();   // 걷는 길 그래프는 따로 불러온다(늦게 와도 오면 다시 계산)
     if (isDemo() && S.data && S.data.meta && S.data.meta.is_mock) {
       setNotice('demo', '미리보기용 가상 데이터예요. 실제 시설 위치·정보가 아니에요.', 'demo');
     }

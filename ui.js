@@ -691,13 +691,15 @@
                 '<span class="rec-name">' + (icon ? '<span aria-hidden="true">' + icon + '</span> ' : '') + esc(s.label) +
                   (isWx ? ' <span class="stop-tag">날씨 경유지</span>' : '') + '</span>' +
                 '<span class="rec-meta">' + esc(s.name) + ' · ' + (s.step === 1 ? '여기서' : '앞 장소에서') +
-                  ' 직선 ' + Number(s.legM).toLocaleString() + 'm, 도보 약 ' + s.legMin + '분</span>' +
+                  (s.legPath ? ' 걸어서 ' : ' 직선 ') + Number(s.legM).toLocaleString() + 'm, 도보 약 ' + s.legMin + '분</span>' +
               '</span>' +
             '</button>' +
           '</li>';
       });
       html += '</ol>';
-      html += '<p class="route-total">' + (guide ? '도착까지' : '모두 들르면') + ' 직선 ' + Number(plan.totalM).toLocaleString() + 'm · 도보 약 ' + plan.totalMin + '분</p>';
+      html += '<p class="route-total">' + (guide ? '도착까지' : '모두 들르면') + (plan.pathBased ? ' 걸어서 ' : ' 직선 ') +
+        Number(plan.totalM).toLocaleString() + 'm · 도보 약 ' + plan.totalMin + '분' +
+        (plan.stepsAvoided ? ' <span class="stop-tag">계단 없는 길</span>' : '') + '</p>';
     }
     if (guide && !isToiletView()) {
       html += '<p class="hint">아래 목록에서 다른 곳을 누르면 그곳으로 길안내를 바꿔요.</p>';
@@ -707,7 +709,10 @@
     if (plan.missing && plan.missing.length) {
       html += '<p class="hint">동선에서 뺀 곳: ' + esc(plan.missing.join(', ')) + '</p>';
     }
-    html += '<p class="route-warn">직선거리 기준이에요. 실제 길은 더 멀거나 계단이 있을 수 있어요.</p>';
+    (plan.pathNotes || []).forEach(function (n) { html += '<p class="route-warn">' + esc(n) + '</p>'; });
+    html += plan.pathBased
+      ? '<p class="route-warn">OpenStreetMap 걷는 길 기준이에요. 경사·공사·통제 구간은 반영되지 않아요.</p>'
+      : '<p class="route-warn">직선거리 기준이에요. 실제 길은 더 멀거나 계단이 있을 수 있어요.</p>';
 
     box.innerHTML = html;
     box.hidden = false;

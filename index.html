@@ -39,6 +39,9 @@
 
   <main class="container">
 
+    <!-- 컨디션·상황·지도·추천을 한 칸에 묶음: 컴퓨터에서 지도가 이 칸 안에서만 따라오고 주차 섹션을 덮지 않게 -->
+    <div class="workspace">
+
     <!-- ===== 1. 오늘의 컨디션 카드 (ui.js가 내용을 채움) ===== -->
     <section id="condition-card" class="card" aria-labelledby="condition-title" aria-live="polite">
       <div class="card-head">
@@ -151,6 +154,8 @@
         <p class="hint">거리 대비 칸 수가 많은 곳을 먼저 보여줘요. 거리는 직선거리라 실제 길은 더 멀 수 있고, 도보 시간은 가정한 걸음 속도로 계산한 값이에요.</p>
       </div>
     </section>
+
+    </div><!-- /.workspace -->
 
     <!-- ===== 6. 주차 붐빔 시간 (그래프는 parking.js가 그림) ===== -->
     <section id="parking-section" class="card" aria-labelledby="parking-title">

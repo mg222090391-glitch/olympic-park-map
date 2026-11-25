@@ -8,6 +8,9 @@
 
   <!-- 지도 라이브러리(MapLibre GL, 3D 지도) 모양 파일: 반드시 style.css보다 먼저 -->
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.1/dist/maplibre-gl.css">
+  <!-- 글꼴: Pretendard (못 불러오면 기기 기본 글꼴로 보임) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <meta name="theme-color" content="#0f4a33">
   <!-- 우리 서비스 모양 파일 (팀원3) -->
   <link rel="stylesheet" href="style.css">
 </head>
@@ -17,11 +20,21 @@
 
   <!-- ===== 맨 위: 서비스 이름 + 첫 방문 안내 ===== -->
   <header class="site-header">
-    <h1 class="site-title">올림픽공원 편의시설 지도</h1>
-    <ol class="how-to">
-      <li><b>내 상황</b>을 고르거나 문장으로 적어 주세요.</li>
-      <li><b>지도</b>와 <b>추천 목록</b>에서 가까운 편의시설을 확인하세요.</li>
-    </ol>
+    <div class="header-inner">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" width="32" height="32"><path d="M16 2.5c-5.8 0-10.5 4.6-10.5 10.3 0 7.6 9.2 15.7 9.6 16a1.4 1.4 0 0 0 1.8 0c.4-.3 9.6-8.4 9.6-16C26.5 7.1 21.8 2.5 16 2.5Z" fill="currentColor"/><path d="M16 7.5c-2.9 2-4.3 4.3-4.3 6.6a4.3 4.3 0 0 0 3.5 4.2v2.9h1.6v-2.9a4.3 4.3 0 0 0 3.5-4.2c0-2.3-1.4-4.6-4.3-6.6Z" fill="#fff"/></svg>
+        </span>
+        <div>
+          <h1 class="site-title">올림픽공원 편의시설 지도</h1>
+          <p class="site-tagline">화장실 · 쉼터 · 충전기 · 엘리베이터 · AED를 내 상황에 맞게</p>
+        </div>
+      </div>
+      <ol class="how-to">
+        <li><span class="how-num" aria-hidden="true">1</span><span><b>내 상황</b>을 고르거나 문장으로 적어 주세요.</span></li>
+        <li><span class="how-num" aria-hidden="true">2</span><span><b>지도</b>와 <b>추천 목록</b>에서 가까운 편의시설을 확인하세요.</span></li>
+      </ol>
+    </div>
   </header>
 
   <main class="container">
@@ -29,7 +42,7 @@
     <!-- ===== 1. 오늘의 컨디션 카드 (ui.js가 내용을 채움) ===== -->
     <section id="condition-card" class="card" aria-labelledby="condition-title" aria-live="polite">
       <div class="card-head">
-        <h2 id="condition-title" class="card-title">오늘의 컨디션</h2>
+        <h2 id="condition-title" class="card-title"><span class="title-icon" aria-hidden="true">🌤️</span>오늘의 컨디션</h2>
         <div class="badges" data-role="condition-badges"></div>
       </div>
       <div class="condition-body" data-role="condition-body">
@@ -39,10 +52,13 @@
 
     <!-- ===== 2. 상황 선택 (체크박스 5개 + 키워드 검색) ===== -->
     <section id="profile-select" class="card" aria-labelledby="profile-title">
-      <h2 id="profile-title" class="card-title">지금 내 상황은? <span class="sub">(여러 개 선택 가능)</span></h2>
+      <h2 id="profile-title" class="card-title"><span class="step-num" aria-hidden="true">1</span>지금 내 상황은? <span class="sub">(여러 개 선택 가능)</span></h2>
 
       <form class="keyword-form" data-role="keyword-form" autocomplete="off">
         <label for="keyword-input" class="visually-hidden">내 상황을 문장으로 적기</label>
+        <span class="keyword-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="m20 20-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </span>
         <input id="keyword-input" class="keyword-input" type="text"
                placeholder="예: 할머니랑 유모차 끌고 왔어요" enterkeyhint="search">
         <button type="submit" class="btn btn-primary">확인</button>
@@ -80,63 +96,65 @@
       <p class="hint">아무것도 고르지 않으면 ‘일반’ 기준으로 안내해요.</p>
     </section>
 
-    <!-- ===== 3~5. 필터 바 + 지도 + 추천 목록 ===== -->
-    <section class="card map-card" aria-labelledby="map-title">
-      <h2 id="map-title" class="card-title">편의시설 지도</h2>
+    <!-- ===== 3~4. 필터 바 + 지도 (컴퓨터: 오른쪽에 크게 고정 / 휴대폰: 상황 선택 아래) ===== -->
+    <section id="map-section" class="card map-card" aria-labelledby="map-title">
+      <div class="map-card-head">
+        <h2 id="map-title" class="card-title"><span class="step-num" aria-hidden="true">2</span>편의시설 지도</h2>
 
-      <!-- 3. 필터 바 -->
-      <div id="filter-bar" role="group" aria-label="화장실 거르기">
-        <button type="button" class="filter-btn" data-filter="diaper" aria-pressed="false">
-          <span aria-hidden="true">🚼</span> 기저귀 교환대
-        </button>
-        <button type="button" class="filter-btn" data-filter="bell" aria-pressed="false">
-          <span aria-hidden="true">🔔</span> 비상벨
-        </button>
-        <button type="button" class="filter-btn" data-filter="openNow" aria-pressed="false">
-          <span aria-hidden="true">🕐</span> 지금 열림
-        </button>
-        <button type="button" class="filter-btn" data-filter="femaleStalls" aria-pressed="false"
-                aria-describedby="female-hint" disabled>
-          <span aria-hidden="true">🚺</span> 여성 칸 기준
-        </button>
+        <!-- 3. 필터 바 -->
+        <div id="filter-bar" role="group" aria-label="화장실 거르기">
+          <button type="button" class="filter-btn" data-filter="diaper" aria-pressed="false">
+            <span aria-hidden="true">🚼</span> 기저귀 교환대
+          </button>
+          <button type="button" class="filter-btn" data-filter="bell" aria-pressed="false">
+            <span aria-hidden="true">🔔</span> 비상벨
+          </button>
+          <button type="button" class="filter-btn" data-filter="openNow" aria-pressed="false">
+            <span aria-hidden="true">🕐</span> 지금 열림
+          </button>
+          <button type="button" class="filter-btn" data-filter="femaleStalls" aria-pressed="false"
+                  aria-describedby="female-hint" disabled>
+            <span aria-hidden="true">🚺</span> 여성 칸 기준
+          </button>
+        </div>
       </div>
       <p id="female-hint" class="hint" data-role="female-hint">‘여성 칸 기준’은 <b>공연 대기</b>를 골랐을 때 쓸 수 있어요.</p>
 
-      <div class="map-layout">
-        <!-- 4. 지도 (map.js가 그림) -->
-        <div id="map" role="region" aria-label="올림픽공원 편의시설 지도"></div>
+      <!-- 4. 지도 (map.js가 그림) -->
+      <div id="map" role="region" aria-label="올림픽공원 편의시설 지도"></div>
 
-        <!-- 5. 추천 화장실 목록 (ui.js가 내용을 채움) -->
-        <div id="recommend-list" class="recommend" tabindex="-1" aria-labelledby="recommend-title">
-          <h3 id="recommend-title" class="recommend-title">추천 화장실 <span class="sub">줄이 덜 몰리는 순</span></h3>
-          <p class="recommend-basis" data-role="recommend-basis"></p>
-          <div data-role="recommend-body" aria-live="polite">
-            <p class="status is-loading">추천을 계산하는 중이에요…</p>
-          </div>
-          <p class="hint">거리 대비 칸 수가 많은 곳을 먼저 보여줘요. 거리는 직선거리라 실제 길은 더 멀 수 있고, 도보 시간은 가정한 걸음 속도로 계산한 값이에요.</p>
+      <!-- 지도 기호 설명 -->
+      <details class="legend">
+        <summary>지도 기호 보기</summary>
+        <ul class="legend-list">
+          <li><span class="mk mk-toilet" aria-hidden="true"></span> 화장실</li>
+          <li><span class="mk mk-toilet-accessible" aria-hidden="true"></span> 장애인 칸 있는 화장실</li>
+          <li><span class="mk mk-facility" aria-hidden="true"></span> 편의시설(자판기·매점 등)</li>
+          <li><span class="mk mk-heat" aria-hidden="true"></span> 무더위쉼터</li>
+          <li><span class="mk mk-cold" aria-hidden="true"></span> 한파쉼터</li>
+          <li><span class="mk mk-charger" aria-hidden="true"></span> 전동휠체어 충전기</li>
+          <li><span class="mk mk-elevator" aria-hidden="true"></span> 지하철 엘리베이터</li>
+          <li><span class="mk mk-aed" aria-hidden="true"></span> 자동심장충격기(AED)</li>
+          <li><span class="mk mk-me" aria-hidden="true"></span> 기준 위치(나)</li>
+        </ul>
+      </details>
+    </section>
+
+    <!-- ===== 5. 추천 화장실 목록 (ui.js가 내용을 채움, 추천 동선도 이 안 맨 위에 생김) ===== -->
+    <section class="card rec-card" aria-labelledby="recommend-title">
+      <div id="recommend-list" class="recommend" tabindex="-1" aria-labelledby="recommend-title">
+        <h2 id="recommend-title" class="card-title recommend-title"><span class="title-icon" aria-hidden="true">🚻</span>추천 화장실 <span class="sub">줄이 덜 몰리는 순</span></h2>
+        <p class="recommend-basis" data-role="recommend-basis"></p>
+        <div data-role="recommend-body" aria-live="polite">
+          <p class="status is-loading">추천을 계산하는 중이에요…</p>
         </div>
-
-        <!-- 지도 기호 설명 (휴대폰: 목록 아래 / 컴퓨터: 지도 아래) -->
-        <details class="legend">
-          <summary>지도 기호 보기</summary>
-          <ul class="legend-list">
-            <li><span class="mk mk-toilet" aria-hidden="true"></span> 화장실</li>
-            <li><span class="mk mk-toilet-accessible" aria-hidden="true"></span> 장애인 칸 있는 화장실</li>
-            <li><span class="mk mk-facility" aria-hidden="true"></span> 편의시설(자판기·매점 등)</li>
-            <li><span class="mk mk-heat" aria-hidden="true"></span> 무더위쉼터</li>
-            <li><span class="mk mk-cold" aria-hidden="true"></span> 한파쉼터</li>
-            <li><span class="mk mk-charger" aria-hidden="true"></span> 전동휠체어 충전기</li>
-            <li><span class="mk mk-elevator" aria-hidden="true"></span> 지하철 엘리베이터</li>
-            <li><span class="mk mk-aed" aria-hidden="true"></span> 자동심장충격기(AED)</li>
-            <li><span class="mk mk-me" aria-hidden="true"></span> 기준 위치(나)</li>
-          </ul>
-        </details>
+        <p class="hint">거리 대비 칸 수가 많은 곳을 먼저 보여줘요. 거리는 직선거리라 실제 길은 더 멀 수 있고, 도보 시간은 가정한 걸음 속도로 계산한 값이에요.</p>
       </div>
     </section>
 
     <!-- ===== 6. 주차 붐빔 시간 (그래프는 parking.js가 그림) ===== -->
     <section id="parking-section" class="card" aria-labelledby="parking-title">
-      <h2 id="parking-title" class="card-title">주차장 붐비는 시간</h2>
+      <h2 id="parking-title" class="card-title"><span class="title-icon" aria-hidden="true">🅿️</span>주차장 붐비는 시간</h2>
       <p class="sub-line">동2문·남2문·북2문 주차장, 시간대별 평균 주차 대수</p>
 
       <div class="chart-box">
@@ -192,6 +210,14 @@
       <p>지도: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> 기여자, <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>, <a href="https://maplibre.org" target="_blank" rel="noopener">MapLibre</a> · 그래프: Chart.js</p>
     </section>
   </footer>
+
+  <!-- ===== 휴대폰 아래쪽 바로가기 (컴퓨터 화면에서는 숨김) ===== -->
+  <nav class="bottom-nav" aria-label="바로가기">
+    <a href="#profile-select"><span aria-hidden="true">🙋</span>내 상황</a>
+    <a href="#map-section"><span aria-hidden="true">🗺️</span>지도</a>
+    <a href="#recommend-list"><span aria-hidden="true">🚻</span>추천</a>
+    <a href="#parking-section"><span aria-hidden="true">🅿️</span>주차</a>
+  </nav>
 
   <noscript><p class="status is-error">이 서비스는 자바스크립트가 켜져 있어야 동작해요.</p></noscript>
 

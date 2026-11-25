@@ -1058,6 +1058,60 @@ a { color: var(--c-primary); text-underline-offset: 3px; }
 .bottom-nav a span { font-size: 1.25rem; line-height: 1.1; }
 .bottom-nav a:active { color: var(--c-primary); background: var(--c-primary-soft); }
 
+/* ---------- 14-1. 출발지 고르기 [팀원1 추가] ---------- */
+.origin-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+.origin-title {
+  flex: none;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--mk-me);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 800;
+}
+.origin-options {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 2px;
+}
+.origin-options::-webkit-scrollbar { display: none; }
+.origin-btn {
+  flex: none;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1.5px solid var(--c-border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--c-text);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+.origin-btn:hover { border-color: #93b4f5; }
+.origin-btn[aria-pressed="true"] {
+  border-color: var(--mk-me);
+  background: #eaf1ff;
+  color: #1e40af;
+  box-shadow: 0 0 0 1px var(--mk-me) inset;
+}
+.origin-btn.is-busy { opacity: 0.6; }
+.origin-now {
+  margin-top: 6px;
+  font-size: 0.8125rem;
+  color: var(--c-muted);
+}
+
 /* ---------- 14-2. 다듬기 (2026-11 2차) ---------- */
 /* 배경: 위쪽에 아주 옅은 초록 빛 */
 body {
@@ -1292,9 +1346,9 @@ body {
   }
   #filter-bar { justify-content: flex-end; }
   #map {
-    height: calc(100vh - 220px);
-    height: calc(100dvh - 220px);
-    min-height: 520px;
+    height: calc(100vh - 290px);
+    height: calc(100dvh - 290px);
+    min-height: 480px;
   }
 
   /* 왼쪽 패널은 조금 촘촘하게 */

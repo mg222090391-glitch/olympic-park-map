@@ -6,7 +6,8 @@
  * Leaflet 2D → MapLibre GL 3D로 바꿨지만, 팀 약속(프롬프트 4번 계산 규칙, 7번 연결 약속)은 그대로다.
  *  - 읽는 것 : window.appState (ui.js가 만듦), window.conditionInfo (weather.js가 만듦)
  *  - 채우는 것: window.appState.userLocation, window.recommendations
- *  - 듣는 이벤트 : profilechange, filterchange, conditionready, focusplace, destinationchange(추가)
+ *  - 듣는 이벤트 : profilechange, filterchange, conditionready, focusplace, destinationchange(추가), originpick(추가)
+ *  - 보내는 이벤트(추가): originchange { key, label, lat, lng } — 기준(출발) 위치가 바뀔 때
  *  - 보내는 이벤트: recommendready, routeready (실패 시 mapdataerror)
  *  - 채우는 것(추가): window.routePlan — 상황별 '들를 곳 순서'(직선거리 기준). 상황을 안 고르면 null
  *      가고 싶은 곳(appState.destination)을 고르면 그곳까지의 '길안내'가 되고, 날씨에 맞는 경유지가 들어간다.
@@ -936,9 +937,11 @@ ${kindVars}
     return min <= OUTSIDE_PARK_M;
   }
 
-  function setOrigin(lat, lng, label) {
+  // key: 출발지 버튼 이름(gps, olympic-stn …), 지도에서 직접 고르면 'custom'
+  function setOrigin(lat, lng, label, key) {
     S.origin = { lat: lat, lng: lng };
     S.originLabel = label;
+    S.originKey = key || 'custom';
     ensureAppState().userLocation = { lat: lat, lng: lng };
     if (!S.meMarker) {
       const p = makePinElement('me', '기준 위치');
@@ -948,17 +951,87 @@ ${kindVars}
       onActivate(p.wrap, openMePopup);
       S.meMarker.on('dragend', () => {
         const q = S.meMarker.getLngLat();
-        setOrigin(q.lat, q.lng, '직접 옮긴 위치');
+        setOrigin(q.lat, q.lng, '직접 옮긴 위치', 'custom');
       });
     } else {
       S.meMarker.setLngLat(ll(lat, lng));
     }
     recompute();
+    document.dispatchEvent(new CustomEvent('originchange', { detail: { key: S.originKey, label: label, lat: lat, lng: lng } }));
+  }
+
+  // ───── 10-1. 출발지 빠르게 고르기 [팀원1 추가] ─────
+  // 지하철역은 data의 지하철 엘리베이터 좌표 중 공원 중심에서 가장 가까운 곳을 쓴다.
+  // 평화의문·남2문 주차장·북2문 좌표는 OpenStreetMap에서 가져왔다(북2문은 같은 이름 버스정류장 위치라 '근처').
+  const ORIGIN_PRESETS = {
+    'olympic-stn': { label: '올림픽공원역', station: /올림픽공원/ },
+    'mongchon-stn': { label: '몽촌토성역', station: /몽촌토성/ },
+    'hanseong-stn': { label: '한성백제역', station: /한성백제/ },
+    'peace-gate': { label: '평화의문(정문)', lat: 37.518313, lng: 127.115394 },
+    's2-parking': { label: '남2문 주차장', lat: 37.514912, lng: 127.124215 },
+    'n2-gate': { label: '북2문 근처', lat: 37.524095, lng: 127.128041 },
+    center: { label: '공원 중심' },
+  };
+
+  function presetPoint(key) {
+    const p = ORIGIN_PRESETS[key];
+    if (!p) return null;
+    if (key === 'center') { const c = parkCenter(); return { lat: c.lat, lng: c.lng, label: p.label }; }
+    if (p.station) {
+      const c = parkCenter();
+      const els = (S.data.subway_elevators || []).filter((e) => validPoint(e) && p.station.test(String(e.station || '')));
+      if (!els.length) return null;
+      els.sort((a, b) => haversine(c.lat, c.lng, a.lat, a.lng) - haversine(c.lat, c.lng, b.lat, b.lng));
+      return { lat: Number(els[0].lat), lng: Number(els[0].lng), label: p.label + ' 엘리베이터' };
+    }
+    return { lat: p.lat, lng: p.lng, label: p.label };
+  }
+
+  function pickOrigin(key) {
+    if (!S.data) return;
+    if (key === 'gps') { locateMe(true); return; }
+    const p = presetPoint(key);
+    if (!p) { tempNotice('그 출발지 위치 정보를 찾지 못했어요.', 'warn'); return; }
+    setOrigin(p.lat, p.lng, p.label, key);
+    // 길안내가 있으면 updateOverlays가 출발지~목적지가 보이게 맞춘다. 없으면 출발지로 이동
+    const plan = window.routePlan;
+    if (!(plan && plan.stops && plan.stops.length)) {
+      S.map.flyTo({ center: ll(p.lat, p.lng), zoom: Math.max(S.map.getZoom(), 16.3), duration: reducedMotion() ? 0 : 900, essential: false });
+    }
+  }
+
+  // 휴대폰 위치. fromButton이면 공원 밖일 때 안내만 하고 출발지는 그대로 둔다
+  function locateMe(fromButton) {
+    const keep = () => document.dispatchEvent(new CustomEvent('originchange', {
+      detail: { key: S.originKey, label: S.originLabel, lat: S.origin.lat, lng: S.origin.lng } }));
+    if (!('geolocation' in navigator)) {
+      tempNotice('이 브라우저는 위치 기능이 없어요. 출발지 버튼이나 지도를 눌러 고르세요.');
+      if (fromButton) keep();
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        if (isInsidePark(lat, lng)) {
+          setOrigin(lat, lng, '내 위치', 'gps');
+          if (fromButton) S.map.flyTo({ center: ll(lat, lng), zoom: Math.max(S.map.getZoom(), 16.5), duration: reducedMotion() ? 0 : 900 });
+        } else {
+          tempNotice('지금 공원 밖에 계셔서 내 위치를 쓸 수 없어요. 출발지 버튼(역·정문·주차장)을 골라 주세요.');
+          if (fromButton) keep();
+        }
+      },
+      () => {
+        tempNotice('위치 정보를 쓸 수 없어요. 출발지 버튼(역·정문·주차장)이나 지도를 눌러 고르세요.');
+        if (fromButton) keep();
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+    );
   }
 
   function initLocation() {
     const c = parkCenter();
-    setOrigin(c.lat, c.lng, '공원 중심 (기본값)');
+    setOrigin(c.lat, c.lng, '공원 중심 (기본값)', 'center');
     if (!('geolocation' in navigator)) {
       tempNotice('이 브라우저는 위치 기능이 없어 공원 중심을 기준으로 계산해요.');
       return;
@@ -968,7 +1041,7 @@ ${kindVars}
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
         if (isInsidePark(lat, lng)) {
-          setOrigin(lat, lng, '내 위치');
+          setOrigin(lat, lng, '내 위치', 'gps');
         } else {
           tempNotice('지금 공원 밖에 계셔서 공원 중심을 기준으로 계산해요. 지도를 누르면 기준 위치를 바꿀 수 있어요.');
         }
@@ -1811,7 +1884,7 @@ ${kindVars}
     const hideRecLines = hasRoute || (dNow !== 'all' && dNow !== 'toilet');
     ['op-rec-casing', 'op-rec-line'].forEach((id) => S.map.setLayoutProperty(id, 'visibility', hideRecLines ? 'none' : 'visible'));
     // 들를 곳이 바뀌었을 때만, 기준 위치와 들를 곳이 모두 보이게 지도를 맞춘다
-    const routeKey = hasRoute ? plan.stops.map((x) => x.lat + ',' + x.lng).join('|') + (plan.pathBased ? '|p' : '') : '';
+    const routeKey = hasRoute ? S.origin.lat + ',' + S.origin.lng + '>' + plan.stops.map((x) => x.lat + ',' + x.lng).join('|') + (plan.pathBased ? '|p' : '') : '';
     if (hasRoute && routeKey !== S.lastRouteKey) {
       const b = new maplibregl.LngLatBounds(ll(S.origin.lat, S.origin.lng), ll(S.origin.lat, S.origin.lng));
       routeCoords.forEach((c) => b.extend(c));
@@ -1972,6 +2045,7 @@ ${kindVars}
     // 날씨가 오면 길안내 경유지도 바뀌므로 전부 다시 계산한다(데이터 전이면 recompute가 그냥 돌아간다)
     document.addEventListener('conditionready', () => { if (S.data && S.origin) recompute(); });
     document.addEventListener('destinationchange', () => { if (S.data && S.origin) onDestinationChange(); });
+    document.addEventListener('originpick', (e) => { const d = (e && e.detail) || {}; if (S.data && S.origin) pickOrigin(d.key); });
     document.addEventListener('focusplace', (e) => { const d = (e && e.detail) || {}; if (S.data) onFocusPlace(d.lat, d.lng); });
 
     const dataPromise = loadData().then((d) => ({ ok: true, d: d }), (err) => ({ ok: false, err: err }));
@@ -2036,7 +2110,7 @@ ${kindVars}
     S.map.on('click', (e) => {
       const t = e.originalEvent && e.originalEvent.target;
       if (t && t.closest && t.closest('.maplibregl-marker')) return;
-      setOrigin(e.lngLat.lat, e.lngLat.lng, '지도에서 고른 위치');
+      setOrigin(e.lngLat.lat, e.lngLat.lng, '지도에서 고른 위치', 'custom');
     });
     initLocation(); // 안에서 recompute()가 불린다
 

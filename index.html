@@ -140,6 +140,22 @@
       </div>
       <p id="female-hint" class="hint" data-role="female-hint">‘여성 칸 기준’은 <b>공연 대기</b>를 골랐을 때 쓸 수 있어요.</p>
 
+      <!-- 출발지 빠르게 고르기 (ui.js가 버튼 연결, map.js가 위치 계산) [팀원1 추가] -->
+      <div class="origin-bar">
+        <span class="origin-title" id="origin-title">출발</span>
+        <div class="origin-options" role="group" aria-labelledby="origin-title">
+          <button type="button" class="origin-btn" data-origin="gps" aria-pressed="false"><span aria-hidden="true">📍</span> 내 위치</button>
+          <button type="button" class="origin-btn" data-origin="olympic-stn" aria-pressed="false"><span aria-hidden="true">🚇</span> 올림픽공원역</button>
+          <button type="button" class="origin-btn" data-origin="mongchon-stn" aria-pressed="false"><span aria-hidden="true">🚇</span> 몽촌토성역</button>
+          <button type="button" class="origin-btn" data-origin="hanseong-stn" aria-pressed="false"><span aria-hidden="true">🚇</span> 한성백제역</button>
+          <button type="button" class="origin-btn" data-origin="peace-gate" aria-pressed="false"><span aria-hidden="true">🏛️</span> 평화의문(정문)</button>
+          <button type="button" class="origin-btn" data-origin="s2-parking" aria-pressed="false"><span aria-hidden="true">🅿️</span> 남2문 주차장</button>
+          <button type="button" class="origin-btn" data-origin="n2-gate" aria-pressed="false"><span aria-hidden="true">🚪</span> 북2문 근처</button>
+          <button type="button" class="origin-btn" data-origin="center" aria-pressed="true"><span aria-hidden="true">🎯</span> 공원 중심</button>
+        </div>
+      </div>
+      <p class="origin-now" data-role="origin-now" aria-live="polite">지금 출발 위치: 공원 중심 (기본값)</p>
+
       <!-- 4. 지도 (map.js가 그림) -->
       <div id="map" role="region" aria-label="올림픽공원 편의시설 지도"></div>
 

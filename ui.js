@@ -1,1 +1,569 @@
-// ui.js: 팀원3(이삭) 담당
+/* =====================================================================
+   올림픽공원 편의시설 지도 - ui.js (팀원3 담당)
+   ---------------------------------------------------------------------
+   하는 일
+   1) window.appState(공유 상태)를 만든다
+   2) 상황 체크박스 5개 → appState.profiles 갱신 → 'profilechange' 보냄
+   3) 키워드 검색 → 맞는 상황 체크박스 자동으로 켜기
+   4) 필터 버튼 4개 → appState.filters 갱신 → 'filterchange' 보냄
+   5) 'conditionready' 들으면 → #condition-card 그리기
+   6) 'recommendready' 들으면 → #recommend-list 그리기
+   6-2) 'routeready' 들으면 → #recommend-list 맨 위에 '추천 동선(들를 곳 순서)' 그리기 [팀원1 추가]
+   7) 추천 목록 항목 누르면 → 'focusplace' 보냄 (detail: { lat, lng })
+   ※ 이벤트는 모두 document에서 보내고 듣는다 (팀 약속 7번)
+   ===================================================================== */
+
+(function () {
+  'use strict';
+
+  /* ---------- 1. 공유 상태 (팀 약속 7번 형식 그대로) ---------- */
+  // map.js보다 먼저 실행되므로, 여기서 바로 만들어 둔다.
+  window.appState = {
+    profiles: [],
+    filters: { diaper: false, bell: false, openNow: false, femaleStalls: false },
+    userLocation: null
+  };
+
+  /* ---------- 2. 프로필 정보 (팀 약속 4번) ---------- */
+  var PROFILE_ORDER = ['wheelchair', 'stroller', 'elderly', 'pregnant', 'concert'];
+
+  var PROFILE_LABEL = {
+    wheelchair: '휠체어',
+    stroller: '유아차',
+    elderly: '오래 못 걷는 동행',
+    pregnant: '임산부',
+    concert: '공연 대기'
+  };
+
+  var PROFILE_KEYWORDS = {
+    wheelchair: ['휠체어', '전동휠체어'],
+    stroller: ['유아차', '유모차', '아기', '아이'],
+    elderly: ['할머니', '할아버지', '어르신', '부모님', '노인'],
+    pregnant: ['임신', '임산부'],
+    concert: ['공연', '콘서트', '대기', '굿즈']
+  };
+
+  // 도보 속도 (분당 m, 가정값). 여러 개 고르면 가장 느린 속도.
+  var SLOW_PROFILES = ['wheelchair', 'stroller', 'elderly', 'pregnant'];
+  var SPEED_NORMAL = 67;
+  var SPEED_SLOW = 50;
+
+  // 이 시간(밀리초) 안에 이벤트가 안 오면 "불러오지 못했어요"를 보여준다.
+  var WAIT_LIMIT_MS = 15000;
+
+  /* ---------- 3. 작은 도우미 함수들 ---------- */
+
+  // 이벤트 보내기
+  function send(name, detail) {
+    document.dispatchEvent(new CustomEvent(name, { detail: detail }));
+  }
+
+  // 글자를 HTML에 안전하게 넣기 (<, > 같은 기호가 태그로 바뀌지 않게)
+  function esc(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function isEmpty(v) {
+    return v === null || v === undefined || v === '';
+  }
+
+  function toNumber(v) {
+    if (typeof v === 'number') return v;
+    if (typeof v === 'string' && v.trim() !== '' && !isNaN(Number(v))) return Number(v);
+    return NaN;
+  }
+
+  function $(selector) {
+    return document.querySelector(selector);
+  }
+
+  /* ---------- 4. 날씨 값 → 화면 글자 ---------- */
+  // 팀원2의 값 형식이 숫자/글자 어느 쪽이어도 깨지지 않게 처리한다.
+
+  function formatTemp(v) {
+    var n = toNumber(v);
+    if (isNaN(n)) return isEmpty(v) ? '–' : esc(v);
+    return Math.round(n) + '°';
+  }
+
+  // rain: true/false (규칙표와 같은 형식) 또는 글자, 숫자(mm)
+  function formatRain(v) {
+    if (v === true) return '비 소식 있음';
+    if (v === false) return '없음';
+    if (isEmpty(v)) return '정보 없음';
+    var n = toNumber(v);
+    if (!isNaN(n)) return n === 0 ? '없음' : n + 'mm';
+    return esc(v);
+  }
+
+  // sky: 글자("맑음") 또는 기상청 하늘상태 코드(1 맑음, 3 구름많음, 4 흐림)
+  function formatSky(v) {
+    var codes = { 1: '맑음', 3: '구름많음', 4: '흐림' };
+    if (isEmpty(v)) return '정보 없음';
+    var n = toNumber(v);
+    if (!isNaN(n) && codes[n]) return codes[n];
+    return esc(v);
+  }
+
+  function skyIcon(text, rain) {
+    if (rain === true) return '☔';
+    if (text.indexOf('맑') > -1) return '☀️';
+    if (text.indexOf('구름') > -1) return '⛅';
+    if (text.indexOf('흐') > -1) return '☁️';
+    return '🌤️';
+  }
+
+  // uv: 숫자(자외선지수) 또는 글자("보통")
+  // 기상청 단계: 0~2 낮음, 3~5 보통, 6~7 높음, 8~10 매우높음, 11 이상 위험
+  function formatUv(v) {
+    if (isEmpty(v)) return '정보 없음';
+    var n = toNumber(v);
+    if (isNaN(n)) return esc(v);
+    var level = n >= 11 ? '위험' : n >= 8 ? '매우높음' : n >= 6 ? '높음' : n >= 3 ? '보통' : '낮음';
+    return level + ' (' + n + ')';
+  }
+
+  // baseTime: "1400" → "14:00", "202611251400" → "11월 25일 14:00", 그 외는 그대로
+  function formatBaseTime(v) {
+    if (isEmpty(v)) return '';
+    var s = String(v).trim();
+    if (/^\d{3,4}$/.test(s)) {
+      s = s.padStart(4, '0');
+      return s.slice(0, 2) + ':' + s.slice(2);
+    }
+    if (/^\d{12}$/.test(s)) {
+      return Number(s.slice(4, 6)) + '월 ' + Number(s.slice(6, 8)) + '일 ' +
+             s.slice(8, 10) + ':' + s.slice(10, 12);
+    }
+    return esc(s);
+  }
+
+  /* ---------- 5. 상황 선택 (체크박스 + 키워드 검색) ---------- */
+
+  function getProfileBoxes() {
+    return Array.prototype.slice.call(
+      document.querySelectorAll('#profile-select input[name="profile"]')
+    );
+  }
+
+  // 체크박스 상태를 읽어서 appState.profiles를 만든다 (항상 같은 순서)
+  function readProfiles() {
+    var checked = getProfileBoxes()
+      .filter(function (box) { return box.checked; })
+      .map(function (box) { return box.value; });
+    return PROFILE_ORDER.filter(function (id) { return checked.indexOf(id) > -1; });
+  }
+
+  // 체크된 칸 모양(.is-checked) 맞추기
+  function syncChipStyle() {
+    getProfileBoxes().forEach(function (box) {
+      var chip = box.closest('.chip');
+      if (chip) chip.classList.toggle('is-checked', box.checked);
+    });
+  }
+
+  // 프로필이 바뀌었을 때 할 일을 한곳에 모음
+  function applyProfiles() {
+    window.appState.profiles = readProfiles();
+    syncChipStyle();
+    updateFemaleButton();
+    updateRecommendBasis();
+    updateConcertSuggest();
+    send('profilechange', { profiles: window.appState.profiles.slice() });
+  }
+
+  // 문장에서 키워드를 찾아 프로필 ID 목록을 돌려준다
+  function findProfilesInText(text) {
+    var compact = text.replace(/\s+/g, ''); // "전동 휠체어"처럼 띄어 써도 찾도록
+    return PROFILE_ORDER.filter(function (id) {
+      return PROFILE_KEYWORDS[id].some(function (word) {
+        return compact.indexOf(word) > -1;
+      });
+    });
+  }
+
+  function handleKeywordSubmit(event) {
+    event.preventDefault();
+    var input = $('#keyword-input');
+    var result = $('[data-role="keyword-result"]');
+    var text = input.value.trim();
+
+    result.classList.remove('is-ok', 'is-none');
+
+    if (!text) {
+      result.textContent = '내 상황을 짧게 적어 주세요. 예: 할머니랑 유모차 끌고 왔어요';
+      result.classList.add('is-none');
+      input.focus();
+      return;
+    }
+
+    var found = findProfilesInText(text);
+
+    if (found.length === 0) {
+      result.textContent = '알아들은 상황이 없어요. 아래에서 직접 골라 주세요.';
+      result.classList.add('is-none');
+      return;
+    }
+
+    // 찾은 상황의 체크박스를 켠다 (이미 켜진 다른 상황은 그대로 둔다)
+    var changed = false;
+    getProfileBoxes().forEach(function (box) {
+      if (found.indexOf(box.value) > -1 && !box.checked) {
+        box.checked = true;
+        changed = true;
+      }
+    });
+
+    var labels = found.map(function (id) { return PROFILE_LABEL[id]; });
+    result.textContent = '이렇게 이해했어요: ' + labels.join(', ');
+    result.classList.add('is-ok');
+
+    if (changed) applyProfiles();
+  }
+
+  /* ---------- 6. 필터 버튼 ---------- */
+
+  function getFilterButtons() {
+    return Array.prototype.slice.call(document.querySelectorAll('#filter-bar .filter-btn'));
+  }
+
+  function handleFilterClick(event) {
+    var btn = event.target.closest('.filter-btn');
+    if (!btn || btn.disabled) return;
+    var key = btn.getAttribute('data-filter');
+    if (!(key in window.appState.filters)) return;
+
+    var on = !window.appState.filters[key];
+    window.appState.filters[key] = on;
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    send('filterchange', { filters: Object.assign({}, window.appState.filters) });
+  }
+
+  // '여성 칸 기준'은 공연 대기를 골랐을 때만 쓸 수 있다 (규칙 4번: 공연 대기에만 적용)
+  function updateFemaleButton() {
+    var btn = $('#filter-bar .filter-btn[data-filter="femaleStalls"]');
+    var hint = $('[data-role="female-hint"]');
+    if (!btn) return;
+
+    var concertOn = window.appState.profiles.indexOf('concert') > -1;
+    btn.disabled = !concertOn;
+    if (hint) hint.hidden = concertOn;
+
+    // 공연 대기를 끄면 여성 칸 기준도 같이 끈다
+    if (!concertOn && window.appState.filters.femaleStalls) {
+      window.appState.filters.femaleStalls = false;
+      btn.setAttribute('aria-pressed', 'false');
+      send('filterchange', { filters: Object.assign({}, window.appState.filters) });
+    }
+  }
+
+  /* ---------- 7. 오늘의 컨디션 카드 ---------- */
+
+  var conditionTimer = null;
+
+  function renderCondition() {
+    var info = window.conditionInfo;
+    var body = $('[data-role="condition-body"]');
+    var badges = $('[data-role="condition-badges"]');
+    if (!body || !info) return;
+
+    clearTimeout(conditionTimer);
+
+    var w = info.weather || {};
+    var skyText = formatSky(w.sky);
+    var messages = Array.isArray(info.messages) ? info.messages : [];
+
+    // 위쪽 배지: 예시 데이터 / 오늘 공연 있음
+    var badgeHtml = '';
+    if (info.source === 'sample') {
+      badgeHtml += '<span class="badge badge-sample">예시 날씨 데이터</span>';
+    }
+    if (info.concertToday) {
+      badgeHtml += '<span class="badge badge-concert"><span aria-hidden="true">🎤</span> 오늘 공연 있음</span>';
+    }
+    badges.innerHTML = badgeHtml;
+
+    var html = '';
+
+    html += '<div class="temps">' +
+              '<p class="temp temp-main"><span class="label">기온</span><span class="value">' + formatTemp(w.temp) + '</span></p>' +
+              '<p class="temp temp-feel"><span class="label">체감</span><span class="value">' + formatTemp(w.feelsLike) + '</span></p>' +
+            '</div>';
+
+    html += '<ul class="weather-items">' +
+              '<li><span class="w-icon" aria-hidden="true">' + skyIcon(skyText, w.rain) + '</span><span class="w-label">하늘</span><b>' + skyText + '</b></li>' +
+              '<li><span class="w-icon" aria-hidden="true">☂️</span><span class="w-label">강수</span><b>' + formatRain(w.rain) + '</b></li>' +
+              '<li><span class="w-icon" aria-hidden="true">🔆</span><span class="w-label">자외선</span><b>' + formatUv(w.uv) + '</b></li>' +
+            '</ul>';
+
+    if (messages.length > 0) {
+      html += '<ul class="messages">' +
+                messages.map(function (m) { return '<li>' + esc(m) + '</li>'; }).join('') +
+              '</ul>';
+    } else {
+      html += '<ul class="messages"><li>오늘은 특별히 챙길 것이 없어요.</li></ul>';
+    }
+
+    // 오늘 공연이 있는데 '공연 대기'를 안 골랐으면 제안한다
+    html += '<div class="concert-suggest" data-role="concert-suggest" hidden>' +
+              '<span>오늘 공연이 있어요. 공연 대기에 맞춰 볼까요?</span>' +
+              '<button type="button" class="btn" data-role="concert-on">공연 대기로 보기</button>' +
+            '</div>';
+
+    var baseTime = formatBaseTime(w.baseTime);
+    if (baseTime) {
+      html += '<p class="base-time">기준 시각 ' + baseTime + (info.source === 'sample' ? ' · 예시 데이터라 실제 날씨와 달라요' : '') + '</p>';
+    } else if (info.source === 'sample') {
+      html += '<p class="base-time">예시 데이터라 실제 날씨와 달라요</p>';
+    }
+
+    body.innerHTML = html;
+    updateConcertSuggest();
+  }
+
+  function updateConcertSuggest() {
+    var box = $('[data-role="concert-suggest"]');
+    if (!box) return;
+    var info = window.conditionInfo;
+    var show = !!(info && info.concertToday) && window.appState.profiles.indexOf('concert') === -1;
+    box.hidden = !show;
+  }
+
+  function turnOnConcert() {
+    var box = $('#profile-select input[value="concert"]');
+    if (box && !box.checked) {
+      box.checked = true;
+      applyProfiles();
+    }
+  }
+
+  function showConditionError() {
+    var body = $('[data-role="condition-body"]');
+    if (!body || window.conditionInfo) return;
+    body.innerHTML = '<p class="status is-error">날씨 정보를 불러오지 못했어요. 잠시 후 새로고침해 주세요.</p>';
+  }
+
+  /* ---------- 8. 추천 화장실 목록 ---------- */
+
+  var recommendTimer = null;
+
+  function currentSpeed() {
+    var slow = window.appState.profiles.some(function (id) {
+      return SLOW_PROFILES.indexOf(id) > -1;
+    });
+    return slow ? SPEED_SLOW : SPEED_NORMAL;
+  }
+
+  // 목록 위의 "기준: ○○ · 걸음 속도 분당 ○m 가정" 문구
+  function updateRecommendBasis() {
+    var el = $('[data-role="recommend-basis"]');
+    if (!el) return;
+    var p = window.appState.profiles;
+    var who = p.length ? p.map(function (id) { return PROFILE_LABEL[id]; }).join(' · ') : '일반';
+    el.textContent = '기준: ' + who + ' · 걸음 속도 분당 ' + currentSpeed() + 'm 가정';
+  }
+
+  // 칸 수 앞에 붙일 말.
+  // map.js가 stallsType('total' | 'female' | 'accessible')을 주면 그 값을 쓰고,
+  // 없으면 규칙 4번에 정해진 '한 가지 상황'일 때만 구체적으로 쓴다.
+  var STALL_TYPE_LABEL = { total: '칸 수', female: '여성 칸', accessible: '장애인 칸' };
+
+  function stallLabel(item) {
+    if (item && STALL_TYPE_LABEL[item.stallsType]) return STALL_TYPE_LABEL[item.stallsType];
+    var p = window.appState.profiles;
+    if (p.length === 1 && p[0] === 'wheelchair') return '장애인 칸';
+    if (p.length === 1 && p[0] === 'concert' && window.appState.filters.femaleStalls) return '여성 칸';
+    return '칸 수';
+  }
+
+  function formatWalk(min) {
+    var n = toNumber(min);
+    if (isNaN(n)) return '도보 시간 정보 없음';
+    if (n < 1) return '도보 1분 이내';
+    return '도보 약 ' + Math.round(n) + '분';
+  }
+
+  function renderRecommendations() {
+    var body = $('[data-role="recommend-body"]');
+    if (!body) return;
+    clearTimeout(recommendTimer);
+    updateRecommendBasis();
+
+    var list = Array.isArray(window.recommendations) ? window.recommendations.slice(0, 3) : [];
+
+    if (list.length === 0) {
+      var f = window.appState.filters;
+      var anyFilter = f.diaper || f.bell || f.openNow || f.femaleStalls;
+      body.innerHTML =
+        '<div class="rec-empty">' +
+          '<b>조건에 맞는 화장실이 없어요.</b>' +
+          (anyFilter
+            ? '위의 필터를 하나씩 꺼 보세요.'
+            : '고른 상황을 줄이거나 지도에서 가까운 화장실을 직접 확인해 주세요.') +
+        '</div>';
+      return;
+    }
+
+    var html = '<ol class="rec-list">';
+    list.forEach(function (item, i) {
+      var stalls = toNumber(item.stalls);
+      var stallText = isNaN(stalls) ? '' : ' · ' + stallLabel(item) + ' ' + stalls + '칸';
+      html +=
+        '<li>' +
+          '<button type="button" class="rec-item" data-lat="' + esc(item.lat) + '" data-lng="' + esc(item.lng) + '">' +
+            '<span class="rec-rank" aria-label="' + (i + 1) + '위">' + (i + 1) + '</span>' +
+            '<span>' +
+              '<span class="rec-name">' + esc(item.name) + '</span>' +
+              '<span class="rec-meta">' + formatWalk(item.walkMin) + stallText + '</span>' +
+            '</span>' +
+          '</button>' +
+        '</li>';
+    });
+    html += '</ol>';
+    body.innerHTML = html;
+  }
+
+  function handleRecommendClick(event) {
+    var btn = event.target.closest('.rec-item');
+    if (!btn) return;
+    var lat = Number(btn.getAttribute('data-lat'));
+    var lng = Number(btn.getAttribute('data-lng'));
+    if (isNaN(lat) || isNaN(lng)) return;
+
+    send('focusplace', { lat: lat, lng: lng });
+
+    // 지도가 화면 밖에 있으면 지도가 보이도록 스크롤
+    var map = document.getElementById('map');
+    if (map) {
+      var r = map.getBoundingClientRect();
+      if (r.top < 0 || r.bottom > window.innerHeight) {
+        var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        map.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+      }
+    }
+  }
+
+  function showRecommendError() {
+    var body = $('[data-role="recommend-body"]');
+    if (!body || Array.isArray(window.recommendations)) return;
+    body.innerHTML = '<p class="status is-error">추천 목록을 아직 만들지 못했어요. 잠시 후 새로고침해 주세요.</p>';
+  }
+
+  /* ---------- 8-2. 추천 동선: 들를 곳 순서 [팀원1 추가] ---------- */
+  // map.js가 window.routePlan을 채우고 'routeready'를 보낸다. 상황을 안 고르면 routePlan은 null → 숨김.
+  // routePlan = { stops:[{step, label, name, lat, lng, legM, legMin}], totalM, totalMin, missing:[], basis }
+  // 항목은 추천 목록과 같은 .rec-item 버튼이라, 누르면 handleRecommendClick이 'focusplace'를 보낸다.
+
+  function getRoutePlanBox() {
+    var box = $('[data-role="route-plan"]');
+    if (box) return box;
+    var rec = document.getElementById('recommend-list');
+    if (!rec) return null;
+    box = document.createElement('div');
+    box.className = 'route-plan';
+    box.setAttribute('data-role', 'route-plan');
+    box.setAttribute('aria-live', 'polite');
+    box.hidden = true;
+    rec.insertBefore(box, rec.firstChild);
+    return box;
+  }
+
+  function renderRoutePlan() {
+    var box = getRoutePlanBox();
+    if (!box) return;
+    var plan = window.routePlan;
+    if (!plan) { box.hidden = true; box.innerHTML = ''; return; }
+
+    var who = plan.profiles.map(function (id) { return PROFILE_LABEL[id]; }).join(' · ');
+    var html = '<h3 class="recommend-title">추천 동선 <span class="sub">' + esc(who) + ' · 들를 곳 순서</span></h3>';
+
+    if (!plan.stops.length) {
+      html += '<div class="rec-empty"><b>들를 곳을 찾지 못했어요.</b>지도에서 가까운 시설을 직접 확인해 주세요.</div>';
+    } else {
+      html += '<ol class="rec-list route-steps">';
+      plan.stops.forEach(function (s) {
+        html +=
+          '<li>' +
+            '<button type="button" class="rec-item" data-lat="' + esc(s.lat) + '" data-lng="' + esc(s.lng) + '">' +
+              '<span class="rec-rank route-rank" aria-label="' + s.step + '번째">' + s.step + '</span>' +
+              '<span>' +
+                '<span class="rec-name">' + esc(s.label) + '</span>' +
+                '<span class="rec-meta">' + esc(s.name) + ' · ' + (s.step === 1 ? '여기서' : '앞 장소에서') +
+                  ' 직선 ' + Number(s.legM).toLocaleString() + 'm, 도보 약 ' + s.legMin + '분</span>' +
+              '</span>' +
+            '</button>' +
+          '</li>';
+      });
+      html += '</ol>';
+      html += '<p class="route-total">모두 들르면 직선 ' + Number(plan.totalM).toLocaleString() + 'm · 도보 약 ' + plan.totalMin + '분</p>';
+    }
+    if (plan.missing && plan.missing.length) {
+      html += '<p class="hint">동선에서 뺀 곳: ' + esc(plan.missing.join(', ')) + '</p>';
+    }
+    html += '<p class="route-warn">직선거리 기준이에요. 실제 길은 더 멀거나 계단이 있을 수 있어요.</p>';
+
+    box.innerHTML = html;
+    box.hidden = false;
+  }
+
+  /* ---------- 9. 다른 파일이 보내는 이벤트 듣기 ---------- */
+  // ui.js가 가장 먼저 실행되므로 바로 등록해 둔다.
+  document.addEventListener('conditionready', renderCondition);
+  document.addEventListener('recommendready', renderRecommendations);
+  document.addEventListener('routeready', renderRoutePlan);   // [팀원1 추가]
+
+  // map.js가 시설 데이터를 못 불러오면 보내는 이벤트 → 15초 기다리지 않고 바로 안내
+  document.addEventListener('mapdataerror', function () {
+    clearTimeout(recommendTimer);
+    var body = $('[data-role="recommend-body"]');
+    if (body) body.innerHTML = '<p class="status is-error">시설 데이터를 불러오지 못해 추천을 만들 수 없어요. 잠시 후 새로고침해 주세요.</p>';
+  });
+
+  /* ---------- 10. 화면 준비되면 버튼 연결 ---------- */
+  function init() {
+    var form = $('[data-role="keyword-form"]');
+    if (form) form.addEventListener('submit', handleKeywordSubmit);
+
+    getProfileBoxes().forEach(function (box) {
+      box.addEventListener('change', applyProfiles);
+    });
+
+    var bar = document.getElementById('filter-bar');
+    if (bar) bar.addEventListener('click', handleFilterClick);
+
+    var rec = document.getElementById('recommend-list');
+    if (rec) rec.addEventListener('click', handleRecommendClick);
+
+    var card = document.getElementById('condition-card');
+    if (card) {
+      card.addEventListener('click', function (e) {
+        if (e.target.closest('[data-role="concert-on"]')) turnOnConcert();
+      });
+    }
+
+    // 새로고침 뒤 브라우저가 체크 상태를 기억한 경우에도 상태를 맞춘다
+    window.appState.profiles = readProfiles();
+    syncChipStyle();
+    updateFemaleButton();
+    updateRecommendBasis();
+
+    // 이미 값이 있으면 바로 그리기 (혹시 이벤트가 먼저 지나간 경우 대비)
+    if (window.conditionInfo) renderCondition();
+    else conditionTimer = setTimeout(showConditionError, WAIT_LIMIT_MS);
+
+    if (window.routePlan !== undefined) renderRoutePlan();     // [팀원1 추가]
+    if (Array.isArray(window.recommendations)) renderRecommendations();
+    else recommendTimer = setTimeout(showRecommendError, WAIT_LIMIT_MS);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();

@@ -1,1 +1,713 @@
-/* style.css: 팀원3(이삭) 담당 */
+/* =====================================================================
+   올림픽공원 편의시설 지도 - style.css (팀원3 담당)
+   ---------------------------------------------------------------------
+   [팀원1에게: map.js에서 쓰는 클래스 이름 약속]
+   1) 마커:  <div class="mk mk-종류"> (map.js가 3D 핀 겉 칸 .mk-wrap 안에 넣음)
+      종류: toilet, toilet-accessible, facility, heat, cold,
+            charger, elevator, aed, me
+      - 강조할 마커: 'mk-highlight' 클래스 추가  (예: 'mk mk-heat mk-highlight')
+      - 흐리게 할 마커: 'mk-dim' 클래스 추가     (예: 'mk mk-toilet mk-dim')
+      - iconSize는 안 넣어도 돼요. 아이콘은 마커 위치 한가운데에 그려져요.
+   2) 팝업 내용 HTML 틀 (bindPopup에 넣는 문자열):
+      <div class="pop">
+        <p class="pop-type">🚻 화장실</p>
+        <h3 class="pop-title">이름</h3>
+        <span class="pop-badge is-open">지금 열림</span>
+        <p class="pop-row"><b>칸 수</b> 여성 11 · 남성 8 · 장애인 2</p>
+        <p class="pop-note">칸 수 정보 없음</p>
+      </div>
+      배지 종류: is-open(열림) is-closed(닫힘) is-unknown(정보 없음)
+                 is-heat(무더위쉼터) is-cold(한파쉼터)
+   ===================================================================== */
+
+/* ---------- 1. 디자인 기본값 (색, 글자, 크기) ---------- */
+:root {
+  /* 기본 색 */
+  --c-bg: #f3f5f8;
+  --c-surface: #ffffff;
+  --c-text: #1a1d21;
+  --c-muted: #4a5260;
+  --c-border: #c9d0da;
+  --c-primary: #0b57d0;        /* 버튼·강조 (흰 글자 대비 충분) */
+  --c-primary-soft: #e3ecfb;
+  --c-focus: #ffbf47;          /* 키보드 포커스 테두리 */
+  --c-error: #b42318;
+  --c-error-soft: #fdecea;
+  --c-sample: #7a4d00;
+  --c-sample-soft: #fff4d6;
+
+  /* 마커 색 (모두 흰 글자와 대비 4.5:1 이상) */
+  --mk-toilet: #1d4ed8;        /* 파랑 */
+  --mk-toilet-accessible: #0f766e; /* 청록 */
+  --mk-facility: #475569;      /* 회색 */
+  --mk-heat: #c2410c;          /* 따뜻한 주황 */
+  --mk-cold: #0369a1;          /* 차가운 하늘색 */
+  --mk-charger: #15803d;       /* 초록 */
+  --mk-elevator: #6d28d9;      /* 보라 */
+  --mk-aed: #b91c1c;           /* 빨강 */
+  --mk-me: #2563eb;            /* 내 위치 */
+
+  /* 글자 크기 */
+  --fs-base: 1.0625rem;        /* 17px */
+  --fs-small: 0.9375rem;       /* 15px */
+  --fs-title: 1.25rem;         /* 20px */
+  --fs-big: 2.25rem;           /* 36px: 기온 숫자 */
+
+  /* 크기 */
+  --tap: 48px;                 /* 버튼 최소 높이 (손가락으로 누르기 쉬운 크기) */
+  --radius: 14px;
+  --gap: 16px;
+}
+
+/* ---------- 2. 기본 ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+               "Malgun Gothic", "맑은 고딕", "Noto Sans KR", sans-serif;
+  font-size: var(--fs-base);
+  line-height: 1.6;
+  word-break: keep-all;        /* 한국어 단어 중간에서 줄 바꾸지 않기 */
+  overflow-wrap: anywhere;
+}
+
+h1, h2, h3, p, ul, ol { margin: 0; }
+
+a { color: var(--c-primary); text-underline-offset: 3px; }
+
+:focus-visible {
+  outline: 3px solid var(--c-focus);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0);
+  white-space: nowrap; border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: 8px; top: -60px;
+  z-index: 2000;
+  padding: 10px 14px;
+  background: var(--c-text);
+  color: #fff;
+  border-radius: 8px;
+  text-decoration: none;
+}
+.skip-link:focus { top: 8px; }
+
+/* ---------- 3. 전체 배치 ---------- */
+.site-header {
+  background: var(--c-primary);
+  color: #fff;
+  padding: 18px var(--gap) 16px;
+}
+.site-title {
+  font-size: 1.375rem;
+  line-height: 1.3;
+  margin-bottom: 8px;
+}
+.how-to {
+  padding-left: 1.4em;
+  font-size: var(--fs-small);
+}
+.how-to b { color: #fff; }
+
+.container {
+  display: grid;
+  gap: var(--gap);
+  padding: var(--gap) 12px;
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: 18px 16px;
+  min-width: 0;
+}
+
+.card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.card-title {
+  font-size: var(--fs-title);
+  line-height: 1.35;
+}
+#profile-select .card-title,
+.map-card .card-title { margin-bottom: 12px; }
+
+.sub {
+  font-size: var(--fs-small);
+  font-weight: 400;
+  color: var(--c-muted);
+}
+.sub-line {
+  color: var(--c-muted);
+  font-size: var(--fs-small);
+  margin: -6px 0 12px;
+}
+#parking-section .card-title { margin-bottom: 8px; }
+
+.hint {
+  margin-top: 10px;
+  font-size: var(--fs-small);
+  color: var(--c-muted);
+}
+
+/* ---------- 4. 버튼 ---------- */
+.btn {
+  min-height: var(--tap);
+  padding: 0 18px;
+  border-radius: 10px;
+  border: 2px solid var(--c-primary);
+  background: var(--c-surface);
+  color: var(--c-primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-primary {
+  background: var(--c-primary);
+  color: #fff;
+}
+.btn:hover { filter: brightness(0.95); }
+
+/* ---------- 5. 오늘의 컨디션 카드 ---------- */
+.badges { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: var(--fs-small);
+  font-weight: 700;
+  border: 1px solid currentColor;
+}
+.badge-sample { color: var(--c-sample); background: var(--c-sample-soft); }
+.badge-concert { color: #6b21a8; background: #f3e8ff; }
+
+.temps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+.temp { display: flex; align-items: baseline; gap: 6px; }
+.temp .label { color: var(--c-muted); font-size: var(--fs-small); }
+.temp .value { font-size: var(--fs-big); font-weight: 800; line-height: 1.1; }
+.temp-feel .value { font-size: 1.75rem; }
+
+.weather-items {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.weather-items li {
+  background: var(--c-bg);
+  border-radius: 10px;
+  padding: 8px 6px;
+  text-align: center;
+  font-size: var(--fs-small);
+  line-height: 1.4;
+}
+.weather-items .w-icon { display: block; font-size: 1.4rem; }
+.weather-items .w-label { display: block; color: var(--c-muted); }
+.weather-items b { display: block; font-size: var(--fs-base); }
+
+.messages {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.messages li {
+  position: relative;
+  padding: 10px 12px 10px 38px;
+  background: var(--c-primary-soft);
+  border-radius: 10px;
+}
+.messages li::before {
+  content: "✔";
+  position: absolute;
+  left: 13px; top: 10px;
+  color: var(--c-primary);
+  font-weight: 700;
+}
+
+.base-time {
+  margin-top: 10px;
+  font-size: var(--fs-small);
+  color: var(--c-muted);
+}
+
+.concert-suggest {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 2px dashed #a855f7;
+  border-radius: 10px;
+}
+
+/* ---------- 6. 상황 선택 ---------- */
+.keyword-form {
+  display: flex;
+  gap: 8px;
+}
+.keyword-input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--tap);
+  padding: 0 14px;
+  border: 2px solid var(--c-border);
+  border-radius: 10px;
+  font: inherit;
+  color: var(--c-text);
+  background: #fff;
+}
+.keyword-input:focus { border-color: var(--c-primary); }
+
+.keyword-result {
+  margin-top: 8px;
+  min-height: 1.6em;
+  font-weight: 700;
+}
+.keyword-result.is-ok { color: var(--c-primary); }
+.keyword-result.is-none { color: var(--c-error); }
+
+.profile-options {
+  border: 0;
+  padding: 0;
+  margin: 10px 0 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 8px 12px;
+  border: 2px solid var(--c-border);
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  line-height: 1.3;
+}
+.chip input {
+  width: 22px; height: 22px;
+  margin: 0;
+  flex: none;
+  accent-color: var(--c-primary);
+}
+.chip-icon { font-size: 1.3rem; flex: none; }
+.chip-text { font-weight: 600; }
+.chip.is-checked {
+  border-color: var(--c-primary);
+  background: var(--c-primary-soft);
+}
+.chip.is-checked .chip-text { color: var(--c-primary); }
+.chip:focus-within { outline: 3px solid var(--c-focus); outline-offset: 2px; }
+
+/* ---------- 7. 필터 바 ---------- */
+#filter-bar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.filter-btn {
+  min-height: var(--tap);
+  padding: 6px 8px;
+  font-size: var(--fs-small);
+  border: 2px solid var(--c-border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--c-text);
+  font-family: inherit;
+  font-weight: 700;
+  line-height: 1.3;
+  cursor: pointer;
+}
+/* 켜진 필터: 색 + ✓ 표시 (색만으로 구분하지 않기) */
+.filter-btn[aria-pressed="true"] {
+  background: var(--c-primary);
+  border-color: var(--c-primary);
+  color: #fff;
+}
+.filter-btn[aria-pressed="true"]::before {
+  content: "✓ ";
+  font-weight: 800;
+}
+.filter-btn:disabled {
+  background: var(--c-bg);
+  color: #6b7280;
+  border-style: dashed;
+  cursor: not-allowed;
+}
+[data-role="female-hint"][hidden] { display: none; }
+
+/* ---------- 8. 지도 + 추천 목록 ---------- */
+/* 휴대폰: 지도 → 추천 목록 → 지도 기호 순서 (지도와 목록이 한 화면에 함께 보이게) */
+.map-layout {
+  display: grid;
+  grid-template-areas: "map" "rec" "legend";
+  gap: 12px;
+  margin-top: 12px;
+}
+#map { grid-area: map; }
+#recommend-list { grid-area: rec; min-width: 0; }
+.legend { grid-area: legend; }
+
+#map {
+  height: 40vh;
+  min-height: 260px;
+  max-height: 520px;
+  border-radius: 12px;
+  border: 1px solid var(--c-border);
+  background: #e8edf2;
+  z-index: 0;                  /* 지도가 다른 요소 위로 올라오지 않게 */
+}
+
+.legend {
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  background: #fff;
+}
+.legend summary {
+  min-height: var(--tap);
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.legend-list {
+  list-style: none;
+  padding: 4px 14px 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 8px 12px;
+}
+.legend-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--fs-small);
+}
+
+.recommend-title {
+  font-size: 1.125rem;
+  margin-bottom: 4px;
+}
+.recommend-basis {
+  line-height: 1.45;
+  font-size: var(--fs-small);
+  color: var(--c-muted);
+  margin-bottom: 8px;
+}
+.rec-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.rec-item {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  align-items: center;
+  gap: 10px;
+  min-height: 60px;
+  padding: 8px 12px;
+  border: 2px solid var(--c-border);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--c-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.rec-item:hover { border-color: var(--c-primary); }
+.rec-rank {
+  width: 36px; height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--mk-toilet);
+  color: #fff;
+  font-weight: 800;
+}
+.rec-name {
+  display: block;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.rec-meta {
+  display: block;
+  font-size: var(--fs-small);
+  color: var(--c-muted);
+}
+.rec-empty {
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--c-bg);
+}
+.rec-empty b { display: block; margin-bottom: 4px; }
+
+/* 추천 동선: 들를 곳 순서 [팀원1 추가] */
+.route-plan {
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--c-border);
+}
+.route-plan[hidden] { display: none; }
+.route-rank { background: #db2777; }          /* 지도 위 동선 선·번호와 같은 색 */
+.route-total {
+  margin-top: 8px;
+  font-weight: 700;
+}
+.route-warn {
+  margin-top: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--c-sample-soft);
+  color: var(--c-sample);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+.route-warn::before { content: "⚠ "; }
+
+/* ---------- 9. 주차 섹션 ---------- */
+.chart-box {
+  position: relative;          /* Chart.js가 크기를 맞추려면 필요 */
+  height: 260px;
+  margin-bottom: 12px;
+}
+.parking-notes {
+  padding-left: 1.2em;
+  display: grid;
+  gap: 6px;
+}
+
+/* ---------- 10. 불러오는 중 / 실패 상태 ---------- */
+.status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--c-bg);
+  color: var(--c-muted);
+}
+.status.is-loading::before {
+  content: "";
+  width: 20px; height: 20px;
+  flex: none;
+  border: 3px solid var(--c-border);
+  border-top-color: var(--c-primary);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+.status.is-error {
+  background: var(--c-error-soft);
+  color: var(--c-error);
+  border: 1px solid currentColor;
+}
+.status.is-error::before { content: "⚠"; font-size: 1.2rem; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- 11. 마커 아이콘 (map.js의 .mk 칸) ---------- */
+/* map.js가 마커 칸 크기를 정해도, 아이콘은 ::before로 칸 한가운데에 그린다 */
+.mk {
+  background: transparent;
+  border: 0;
+}
+.mk::before {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: 30px; height: 30px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI Symbol", sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  transition: transform 0.15s;
+}
+
+/* 종류별 모양: 색 + 기호 + 모양(원/네모/다이아몬드)으로 구분 */
+.mk-toilet::before            { content: "WC"; font-size: 12px; background: var(--mk-toilet); border-radius: 50%; }
+.mk-toilet-accessible::before { content: "\267F\FE0E"; font-size: 17px; background: var(--mk-toilet-accessible); border-radius: 50%; }
+.mk-facility::before          { content: "i"; font-family: Georgia, serif; font-size: 17px; background: var(--mk-facility); border-radius: 50%; width: 26px; height: 26px; }
+.mk-heat::before              { content: "\2600\FE0E"; font-size: 17px; background: var(--mk-heat); border-radius: 8px; }
+.mk-cold::before              { content: "\2744\FE0E"; font-size: 17px; background: var(--mk-cold); border-radius: 8px; }
+.mk-charger::before           { content: "\26A1\FE0E"; font-size: 16px; background: var(--mk-charger); border-radius: 8px; }
+.mk-elevator::before          { content: "\21C5"; font-size: 18px; background: var(--mk-elevator); border-radius: 4px; }
+.mk-aed::before               { content: "AED"; font-size: 10px; letter-spacing: -0.3px; background: var(--mk-aed); border-radius: 50% 50% 50% 0; width: 32px; height: 32px; }
+.mk-me::before                { content: ""; width: 20px; height: 20px; background: var(--mk-me); border: 3px solid #fff; border-radius: 50%; box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.25), 0 1px 4px rgba(0, 0, 0, 0.45); }
+
+/* 강조된 마커 (예: 날씨에 맞춰 가까운 쉼터) */
+.mk.mk-highlight { z-index: 1000 !important; }
+.mk.mk-highlight::before {
+  transform: translate(-50%, -50%) scale(1.35);
+  box-shadow: 0 0 0 4px var(--c-focus), 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+/* 흐린 마커 (조건에 맞지 않는 곳) */
+.mk.mk-dim::before {
+  opacity: 0.35;
+  filter: grayscale(1);
+  box-shadow: none;
+}
+
+/* 범례 안에서 쓰는 마커 (지도 밖이라 크기를 직접 정함) */
+.legend-list .mk {
+  position: relative;
+  display: inline-block;
+  width: 34px; height: 34px;
+  flex: none;
+}
+
+/* ---------- 12. 지도 팝업 모양 (MapLibre) ---------- */
+.maplibregl-map { font-family: inherit; font-size: var(--fs-small); }
+
+.maplibregl-popup-content {
+  padding: 14px 16px;
+  min-width: 200px;
+  max-width: 260px;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  font-size: var(--fs-small);
+  line-height: 1.5;
+}
+.maplibregl-popup-close-button {
+  width: 36px; height: 36px;
+  font-size: 24px;
+  line-height: 34px;
+}
+
+.pop { display: grid; gap: 4px; }
+.maplibregl-popup-content .pop p,
+.maplibregl-popup-content .pop h3 { margin: 0; }
+.pop-type {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--c-muted);
+}
+.pop-title {
+  font-size: 1.0625rem;
+  line-height: 1.35;
+  padding-right: 20px;         /* 닫기 버튼과 겹치지 않게 */
+}
+.pop-row b { margin-right: 4px; }
+.pop-note {
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--c-sample-soft);
+  color: var(--c-sample);
+  font-weight: 600;
+}
+.pop-badge {
+  justify-self: start;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  border: 1px solid currentColor;
+}
+.pop-badge.is-open    { color: #146c2e; background: #e6f4ea; }
+.pop-badge.is-open::before    { content: "● "; }
+.pop-badge.is-closed  { color: var(--c-error); background: var(--c-error-soft); }
+.pop-badge.is-closed::before  { content: "✕ "; }
+.pop-badge.is-unknown { color: var(--c-muted); background: var(--c-bg); }
+.pop-badge.is-unknown::before { content: "? "; }
+.pop-badge.is-heat    { color: #fff; background: var(--mk-heat); border-color: var(--mk-heat); }
+.pop-badge.is-heat::before    { content: "\2600\FE0E  "; }
+.pop-badge.is-cold    { color: #fff; background: var(--mk-cold); border-color: var(--mk-cold); }
+.pop-badge.is-cold::before    { content: "\2744\FE0E  "; }
+
+/* ---------- 13. 맨 아래 안내 ---------- */
+.site-footer {
+  margin-top: 8px;
+  padding: 24px 16px 40px;
+  background: #e6eaf0;
+  color: var(--c-text);
+  font-size: var(--fs-small);
+  display: grid;
+  gap: 18px;
+}
+.site-footer > section { max-width: 1120px; width: 100%; margin: 0 auto; }
+.site-footer h2 { font-size: 1rem; margin-bottom: 6px; }
+.site-footer ul { padding-left: 1.2em; display: grid; gap: 4px; }
+.source-list { margin-bottom: 8px; }
+
+/* ---------- 14. 큰 화면 (태블릿·컴퓨터) ---------- */
+@media (min-width: 600px) {
+  .profile-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  #filter-bar { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (min-width: 900px) {
+  .site-header { padding: 24px max(24px, calc((100% - 1120px) / 2 + 12px)); }
+  .site-title { font-size: 1.75rem; }
+  .how-to { font-size: var(--fs-base); }
+
+  .container {
+    grid-template-columns: 1fr 1fr;
+    padding: 24px;
+    gap: 20px;
+  }
+  /* 컨디션 카드와 상황 선택은 나란히, 지도와 주차는 한 줄 전체 */
+  .map-card, #parking-section { grid-column: 1 / -1; }
+
+  .profile-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  /* 지도 왼쪽, 추천 목록 오른쪽 */
+  .map-layout {
+    grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+    grid-template-areas: "map rec" "legend rec";
+    align-items: start;
+  }
+  .source-list { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 32px; }
+  #map { height: 520px; max-height: none; }
+  .chart-box { height: 320px; }
+}
+
+/* 움직임 줄이기 설정을 켠 사용자 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

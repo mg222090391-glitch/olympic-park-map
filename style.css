@@ -215,25 +215,31 @@ a { color: var(--c-primary); text-underline-offset: 3px; }
 }
 
 /* ---------- 4. 전체 배치 (휴대폰 기본: 한 줄씩) ---------- */
+/* .container = [.workspace(컨디션·상황·지도·추천)] + [주차]
+   지도가 따라오는(sticky) 범위를 .workspace 안으로 묶어, 아래 주차 섹션을 덮지 않게 한다. */
 .container {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gap);
+  padding: var(--gap) 12px 24px;
+  max-width: 1480px;
+  margin: 0 auto;
+}
+.workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
     "cond"
     "prof"
     "map"
-    "rec"
-    "park";
+    "rec";
   gap: var(--gap);
-  padding: var(--gap) 12px 24px;
-  max-width: 1480px;
-  margin: 0 auto;
+  min-width: 0;
 }
 #condition-card  { grid-area: cond; }
 #profile-select  { grid-area: prof; }
 .map-card        { grid-area: map; }
 .rec-card        { grid-area: rec; }
-#parking-section { grid-area: park; }
 
 .card {
   background: var(--c-surface);
@@ -937,12 +943,15 @@ a { color: var(--c-primary); text-underline-offset: 3px; }
   .site-header { padding: 22px 24px 24px; }
   .site-title { font-size: 1.5rem; }
   .container {
+    padding: 20px 20px 32px;
+    gap: 18px;
+  }
+  .workspace {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     grid-template-areas:
       "cond prof"
       "map  map"
-      "rec  park";
-    padding: 20px 20px 32px;
+      "rec  rec";
     gap: 18px;
     align-items: start;
   }
@@ -979,14 +988,16 @@ a { color: var(--c-primary); text-underline-offset: 3px; }
   }
 
   .container {
+    padding: 20px 24px 36px;
+    gap: 20px;
+  }
+  .workspace {
     grid-template-columns: minmax(340px, 400px) minmax(0, 1fr);
-    grid-template-rows: auto auto 1fr auto;
+    grid-template-rows: auto auto 1fr;
     grid-template-areas:
       "cond map"
       "prof map"
-      "rec  map"
-      "park park";
-    padding: 20px 24px 36px;
+      "rec  map";
     gap: 18px 20px;
   }
   .rec-card { align-self: start; }
@@ -1024,7 +1035,7 @@ a { color: var(--c-primary); text-underline-offset: 3px; }
 }
 
 @media (min-width: 1280px) {
-  .container { grid-template-columns: 420px minmax(0, 1fr); }
+  .workspace { grid-template-columns: 420px minmax(0, 1fr); }
   .source-list { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; }
 }
 

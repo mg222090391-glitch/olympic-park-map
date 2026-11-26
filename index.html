@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>올림픽공원 편의시설 지도</title>
   <meta name="description" content="올림픽공원의 화장실, 쉼터, 전동휠체어 충전기, 지하철 엘리베이터, AED를 내 상황에 맞게 찾아보는 지도">
 
@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.1/dist/maplibre-gl.css">
   <!-- 글꼴: Pretendard (못 불러오면 기기 기본 글꼴로 보임) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-  <meta name="theme-color" content="#0f4a33">
+  <meta name="theme-color" content="#ffffff">
   <meta name="color-scheme" content="light dark">
   <!-- 어두운 화면·큰 글씨: 화면이 그려지기 전에 정해 둔다(깜빡임 방지). 직접 고른 값 → 기기 설정 순서 -->
   <script>
@@ -25,284 +25,334 @@
   </script>
   <!-- 우리 서비스 모양 파일 (팀원3) -->
   <link rel="stylesheet" href="style.css">
+  <!-- 휴대폰 앱 화면 배치 (팀원 공통: JS가 쓰는 id·class·data-role은 그대로) -->
+  <link rel="stylesheet" href="mobile.css">
 </head>
-<body>
+<body class="app">
 
-  <a class="skip-link" href="#recommend-list">추천 화장실 목록으로 바로 가기</a>
+  <a class="skip-link" href="#app-main">본문으로 바로 가기</a>
 
-  <!-- ===== 맨 위: 서비스 이름 + 첫 방문 안내 ===== -->
-  <header class="site-header">
-    <div class="header-inner">
-      <div class="brand">
-        <span class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 32 32" width="32" height="32"><path d="M16 2.5c-5.8 0-10.5 4.6-10.5 10.3 0 7.6 9.2 15.7 9.6 16a1.4 1.4 0 0 0 1.8 0c.4-.3 9.6-8.4 9.6-16C26.5 7.1 21.8 2.5 16 2.5Z" fill="currentColor"/><path d="M16 7.5c-2.9 2-4.3 4.3-4.3 6.6a4.3 4.3 0 0 0 3.5 4.2v2.9h1.6v-2.9a4.3 4.3 0 0 0 3.5-4.2c0-2.3-1.4-4.6-4.3-6.6Z" fill="#fff"/></svg>
-        </span>
-        <div>
-          <h1 class="site-title">올림픽공원 편의시설 지도</h1>
-          <p class="site-tagline">화장실 · 쉼터 · 충전기 · 엘리베이터 · AED를 내 상황에 맞게</p>
-        </div>
+  <!-- ===== 맨 위: KSPO 로고 + 서비스 이름 + 작은 버튼 ===== -->
+  <header class="site-header app-bar">
+    <div class="app-bar-inner">
+      <div class="app-brand">
+        <!-- KSPO 로고: assets/kspo-logo.png 파일을 넣으면 보여요. 파일이 없으면 글자로 대신 보여요 -->
+        <img class="kspo-logo" src="assets/kspo-logo.png" alt="KSPO 국민체육진흥공단"
+             onerror="this.hidden=true;this.nextElementSibling.hidden=false">
+        <span class="kspo-text" hidden>KSPO</span>
+        <span class="app-divider" aria-hidden="true"></span>
+        <h1 class="site-title">올림픽공원<br>편의시설 지도</h1>
       </div>
       <div class="header-actions">
         <button type="button" class="size-toggle" data-role="size-toggle" aria-pressed="false"><span class="size-icon" aria-hidden="true">가</span><span class="theme-text">큰 글씨</span></button>
         <button type="button" class="share-open" data-role="share-open" aria-haspopup="dialog"><span aria-hidden="true">🔗</span><span class="theme-text">공유</span></button>
         <button type="button" class="theme-toggle" data-role="theme-toggle" aria-pressed="false" aria-label="어두운 화면으로 보기"><span aria-hidden="true">🌙</span><span class="theme-text">어둡게</span></button>
       </div>
-      <ol class="how-to">
-        <li><span class="how-num" aria-hidden="true">1</span><span><b>내 상황</b>을 고르거나 문장으로 적어 주세요.</span></li>
-        <li><span class="how-num" aria-hidden="true">2</span><span><b>가고 싶은 곳</b>을 고르세요.</span></li>
-        <li><span class="how-num" aria-hidden="true">3</span><span><b>지도</b>와 <b>날씨 맞춤 길안내</b>를 확인하세요.</span></li>
-      </ol>
     </div>
   </header>
 
-  <!-- ===== 응급 버튼: 늘 화면 위에 붙어 있다. 누르면 응급 화면(119·내 위치·가까운 AED) [팀원1 추가] ===== -->
+  <!-- ===== 응급 버튼: 어느 화면에서든 늘 보인다. 누르면 응급 화면(119·내 위치·가까운 AED) ===== -->
   <div class="emergency-bar">
     <button type="button" class="emergency-btn" data-role="em-open" aria-haspopup="dialog">
       <span class="em-btn-icon" aria-hidden="true">🚨</span>
-      <span class="em-btn-text">응급 상황 <span class="em-btn-sub">(119 · AED)</span></span>
+      <span class="em-btn-text">응급 상황 <span class="em-btn-sub">119 전화 · 가까운 AED</span></span>
     </button>
   </div>
 
-  <main class="container">
+  <!-- ===== 화면들: 아래 탭을 누르면 한 화면씩 보인다 (nav.js) ===== -->
+  <main id="app-main" class="app-main" tabindex="-1">
 
-    <!-- 컨디션·상황·지도·추천을 한 칸에 묶음: 컴퓨터에서 지도가 이 칸 안에서만 따라오고 주차 섹션을 덮지 않게 -->
-    <div class="workspace">
+    <!-- ── 홈 ── -->
+    <div class="screen is-active" data-screen="home" aria-label="홈">
+      <nav class="home-menu" aria-label="기능 바로 열기">
+        <button type="button" class="home-tile tile-situation" data-go="situation">
+          <span class="tile-icon" aria-hidden="true"></span>
+          <span class="tile-name">내 상황 고르기</span>
+          <span class="tile-desc">휠체어·유아차·어르신 동행</span>
+        </button>
+        <button type="button" class="home-tile tile-dest" data-go="situation" data-focus="dest-select">
+          <span class="tile-icon" aria-hidden="true"></span>
+          <span class="tile-name">어디 가요?</span>
+          <span class="tile-desc">화장실·쉴 곳·충전기·AED</span>
+        </button>
+        <button type="button" class="home-tile tile-map" data-go="map">
+          <span class="tile-icon" aria-hidden="true"></span>
+          <span class="tile-name">지도 보기</span>
+          <span class="tile-desc">출발지·거르기·도보 범위</span>
+        </button>
+        <button type="button" class="home-tile tile-route" data-go="route">
+          <span class="tile-icon" aria-hidden="true"></span>
+          <span class="tile-name">길안내·추천</span>
+          <span class="tile-desc">들를 곳 순서, 소리로 듣기</span>
+        </button>
+        <button type="button" class="home-tile tile-parking" data-go="parking">
+          <span class="tile-icon" aria-hidden="true"></span>
+          <span class="tile-name">주차 붐비는 시간</span>
+          <span class="tile-desc">평일·주말 시간대별</span>
+        </button>
+        <button type="button" class="home-tile tile-info" data-go="info">
+          <span class="tile-icon" aria-hidden="true"></span>
+          <span class="tile-name">이용 안내</span>
+          <span class="tile-desc">데이터 출처와 한계</span>
+        </button>
+      </nav>
 
-    <!-- ===== 0. 오늘 방문 요약: 날씨 한 줄 + 주차 붐비는 시간 + 내 상황에 맞는 곳 (ui.js가 채움) [팀원1 추가] ===== -->
-    <section id="visit-summary" class="card visit-card" aria-labelledby="visit-title">
-      <h2 id="visit-title" class="card-title"><span class="title-icon" aria-hidden="true">📝</span>오늘 방문 요약</h2>
-      <ul class="visit-list" data-role="visit-body">
-        <li class="status is-loading">요약을 만드는 중이에요…</li>
-      </ul>
-    </section>
-
-    <!-- ===== 1. 오늘의 컨디션 카드 (ui.js가 내용을 채움) ===== -->
-    <section id="condition-card" class="card" aria-labelledby="condition-title" aria-live="polite">
-      <div class="card-head">
-        <h2 id="condition-title" class="card-title"><span class="title-icon" aria-hidden="true">🌤️</span>오늘의 컨디션</h2>
-        <div class="badges" data-role="condition-badges"></div>
-      </div>
-      <div class="condition-body" data-role="condition-body">
-        <p class="status is-loading">날씨 정보를 불러오는 중이에요…</p>
-      </div>
-    </section>
-
-    <!-- ===== 2. 상황 선택 (체크박스 5개 + 키워드 검색) ===== -->
-    <section id="profile-select" class="card" aria-labelledby="profile-title">
-      <h2 id="profile-title" class="card-title"><span class="step-num" aria-hidden="true">1</span>지금 내 상황은? <span class="sub">(여러 개 선택 가능)</span></h2>
-
-      <form class="keyword-form" data-role="keyword-form" autocomplete="off">
-        <label for="keyword-input" class="visually-hidden">내 상황을 문장으로 적기</label>
-        <span class="keyword-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="m20 20-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        </span>
-        <input id="keyword-input" class="keyword-input" type="text"
-               placeholder="예: 할머니랑 유모차 끌고 왔어요" enterkeyhint="search">
-        <button type="submit" class="btn btn-primary">확인</button>
-      </form>
-      <p class="keyword-result" data-role="keyword-result" aria-live="polite"></p>
-
-      <fieldset class="profile-options">
-        <legend class="visually-hidden">상황 고르기</legend>
-        <label class="chip">
-          <input type="checkbox" name="profile" value="wheelchair">
-          <span class="chip-icon" aria-hidden="true">♿&#xFE0E;</span>
-          <span class="chip-text">휠체어</span>
-        </label>
-        <label class="chip">
-          <input type="checkbox" name="profile" value="stroller">
-          <span class="chip-icon" aria-hidden="true">👶</span>
-          <span class="chip-text">유아차</span>
-        </label>
-        <label class="chip">
-          <input type="checkbox" name="profile" value="elderly">
-          <span class="chip-icon" aria-hidden="true">🧓</span>
-          <span class="chip-text">오래 못 걷는 동행</span>
-        </label>
-        <label class="chip">
-          <input type="checkbox" name="profile" value="pregnant">
-          <span class="chip-icon" aria-hidden="true">🤰</span>
-          <span class="chip-text">임산부</span>
-        </label>
-        <label class="chip">
-          <input type="checkbox" name="profile" value="concert">
-          <span class="chip-icon" aria-hidden="true">🎤</span>
-          <span class="chip-text">공연 대기</span>
-        </label>
-      </fieldset>
-      <p class="hint">아무것도 고르지 않으면 ‘일반’ 기준으로 안내해요.</p>
-    </section>
-
-    <!-- ===== 2-2. 가고 싶은 곳 (ui.js가 버튼 연결, map.js가 목록·길안내 계산) [팀원1 추가] ===== -->
-    <section id="dest-select" class="card" aria-labelledby="dest-title">
-      <h2 id="dest-title" class="card-title"><span class="step-num" aria-hidden="true">2</span>어디 가요? <span class="sub">(하나만 선택)</span></h2>
-      <div class="dest-options" role="group" aria-label="가고 싶은 곳 고르기">
-        <button type="button" class="dest-btn" data-dest="all" aria-pressed="true"><span class="dest-icon" aria-hidden="true">🗺️</span><span class="dest-text">전체 보기</span></button>
-        <button type="button" class="dest-btn" data-dest="toilet" aria-pressed="false"><span class="dest-icon" aria-hidden="true">🚻</span><span class="dest-text">화장실</span></button>
-        <button type="button" class="dest-btn" data-dest="rest" aria-pressed="false"><span class="dest-icon" aria-hidden="true">🪑</span><span class="dest-text">쉴 곳</span></button>
-        <button type="button" class="dest-btn" data-dest="shop" aria-pressed="false"><span class="dest-icon" aria-hidden="true">🛒</span><span class="dest-text">매점·자판기</span></button>
-        <button type="button" class="dest-btn" data-dest="water" aria-pressed="false"><span class="dest-icon" aria-hidden="true">🚰</span><span class="dest-text">음수대</span></button>
-        <button type="button" class="dest-btn" data-dest="charger" aria-pressed="false"><span class="dest-icon" aria-hidden="true">🔌</span><span class="dest-text">휠체어 충전</span></button>
-        <button type="button" class="dest-btn" data-dest="elevator" aria-pressed="false"><span class="dest-icon" aria-hidden="true">🛗</span><span class="dest-text">지하철 엘리베이터</span></button>
-        <button type="button" class="dest-btn" data-dest="aed" aria-pressed="false"><span class="dest-icon" aria-hidden="true">💓</span><span class="dest-text">AED</span></button>
-        <button type="button" class="dest-btn dest-wide" data-dest="transit" aria-pressed="false"><span class="dest-icon" aria-hidden="true">🚉</span><span class="dest-text">역·버스·택시 <small>교통 브리핑</small></span></button>
-      </div>
-      <p class="hint">내 상황에 맞는 곳에는 <b>추천</b> 표시가 붙어요. 고르면 지도와 목록에 그곳만 남고, 날씨에 맞춰 길안내해요.</p>
-      <!-- 보호자·일행에게 지금 설정 보내기 [팀원1 추가] -->
-      <div class="share-quick">
-        <button type="button" class="btn share-quick-btn" data-role="share-quick"><span aria-hidden="true">🔗</span> 이 설정 공유하기</button>
-        <p class="share-quick-result" data-role="share-quick-result" aria-live="polite">보호자·일행에게 보내면 같은 상황·목적지로 열려요.</p>
-      </div>
-    </section>
-
-    <!-- ===== 3~4. 필터 바 + 지도 (컴퓨터: 오른쪽에 크게 고정 / 휴대폰: 상황 선택 아래) ===== -->
-    <section id="map-section" class="card map-card" aria-labelledby="map-title">
-      <div class="map-card-head">
-        <h2 id="map-title" class="card-title"><span class="step-num" aria-hidden="true">3</span>편의시설 지도</h2>
-
-        <!-- 3. 필터 바 -->
-        <div id="filter-bar" role="group" aria-label="화장실 거르기">
-          <button type="button" class="filter-btn" data-filter="diaper" aria-pressed="false">
-            <span aria-hidden="true">🚼</span> 기저귀 교환대
-          </button>
-          <button type="button" class="filter-btn" data-filter="bell" aria-pressed="false">
-            <span aria-hidden="true">🔔</span> 비상벨
-          </button>
-          <button type="button" class="filter-btn" data-filter="openNow" aria-pressed="false">
-            <span aria-hidden="true">🕐</span> 운영시간 확인된 곳만
-          </button>
-          <button type="button" class="filter-btn" data-filter="femaleStalls" aria-pressed="false"
-                  aria-describedby="female-hint" disabled>
-            <span aria-hidden="true">🚺</span> 여성 칸 기준
-          </button>
-        </div>
-      </div>
-      <p id="female-hint" class="hint" data-role="female-hint">‘여성 칸 기준’은 <b>공연 대기</b>를 골랐을 때 쓸 수 있어요.</p>
-
-      <!-- 출발지 빠르게 고르기 (ui.js가 버튼 연결, map.js가 위치 계산) [팀원1 추가] -->
-      <div class="origin-bar">
-        <span class="origin-title" id="origin-title">출발</span>
-        <button type="button" class="origin-btn origin-gps" data-origin="gps" aria-pressed="false"><span aria-hidden="true">📍</span> 내 위치에서 출발</button>
-      </div>
-      <details class="origin-more" data-role="origin-more">
-        <summary><span data-role="origin-more-label">다른 곳에서 출발</span> <span class="sub">(역·출입문·주차장)</span></summary>
-        <div class="origin-options" role="group" aria-label="다른 출발지 고르기">
-          <button type="button" class="origin-btn" data-origin="olympic-stn" aria-pressed="false"><span aria-hidden="true">🚇</span> 올림픽공원역</button>
-          <button type="button" class="origin-btn" data-origin="mongchon-stn" aria-pressed="false"><span aria-hidden="true">🚇</span> 몽촌토성역</button>
-          <button type="button" class="origin-btn" data-origin="hanseong-stn" aria-pressed="false"><span aria-hidden="true">🚇</span> 한성백제역</button>
-          <button type="button" class="origin-btn" data-origin="peace-gate" aria-pressed="false"><span aria-hidden="true">🏛️</span> 평화의문(정문)</button>
-          <button type="button" class="origin-btn" data-origin="s2-parking" aria-pressed="false"><span aria-hidden="true">🅿️</span> 남2문 주차장</button>
-          <button type="button" class="origin-btn" data-origin="n2-gate" aria-pressed="false"><span aria-hidden="true">🚪</span> 북2문 근처</button>
-          <button type="button" class="origin-btn" data-origin="center" aria-pressed="true"><span aria-hidden="true">🎯</span> 공원 중심</button>
-        </div>
-      </details>
-      <p class="origin-now" data-role="origin-now" aria-live="polite">지금 출발 위치: 공원 중심 (기본값)</p>
-
-      <!-- 4. 지도 (map.js가 그림) -->
-      <div id="map" role="region" aria-label="올림픽공원 편의시설 지도"></div>
-
-      <!-- 지도 기호 설명 -->
-      <details class="legend">
-        <summary>지도 기호 보기</summary>
-        <ul class="legend-list">
-          <li><span class="mk mk-toilet" aria-hidden="true"></span> 화장실</li>
-          <li><span class="mk mk-toilet-accessible" aria-hidden="true"></span> 장애인 칸 있는 화장실</li>
-          <li><span class="mk mk-facility" aria-hidden="true"></span> 편의시설(자판기·매점 등)</li>
-          <li><span class="mk mk-heat" aria-hidden="true"></span> 무더위쉼터</li>
-          <li><span class="mk mk-cold" aria-hidden="true"></span> 한파쉼터</li>
-          <li><span class="mk mk-charger" aria-hidden="true"></span> 전동휠체어 충전기</li>
-          <li><span class="mk mk-elevator" aria-hidden="true"></span> 지하철 엘리베이터</li>
-          <li><span class="mk mk-aed" aria-hidden="true"></span> 자동심장충격기(AED)</li>
-          <li><span class="mk mk-subway" aria-hidden="true"></span> 지하철역</li>
-          <li><span class="mk mk-bus" aria-hidden="true"></span> 버스정류장</li>
-          <li><span class="mk mk-taxi" aria-hidden="true"></span> 택시 타기 좋은 곳</li>
-          <li><span class="mk mk-me" aria-hidden="true"></span> 기준 위치(나)</li>
+      <section id="visit-summary" class="card visit-card" aria-labelledby="visit-title">
+        <h2 id="visit-title" class="card-title"><span class="title-icon" aria-hidden="true">📝</span>오늘 방문 요약</h2>
+        <ul class="visit-list" data-role="visit-body">
+          <li class="status is-loading">요약을 만드는 중이에요…</li>
         </ul>
-      </details>
-    </section>
+      </section>
 
-    <!-- ===== 5. 추천 화장실 목록 (ui.js가 내용을 채움, 추천 동선도 이 안 맨 위에 생김) ===== -->
-    <section class="card rec-card" aria-labelledby="recommend-title">
-      <div id="recommend-list" class="recommend" tabindex="-1" aria-labelledby="recommend-title">
-        <h2 id="recommend-title" class="card-title recommend-title"><span class="title-icon" aria-hidden="true">🚻</span>추천 화장실 <span class="sub">가깝고 칸이 많은 순</span></h2>
-        <p class="recommend-basis" data-role="recommend-basis"></p>
-        <div data-role="recommend-body" aria-live="polite">
-          <p class="status is-loading">추천을 계산하는 중이에요…</p>
+      <section id="condition-card" class="card" aria-labelledby="condition-title" aria-live="polite">
+        <div class="card-head">
+          <h2 id="condition-title" class="card-title"><span class="title-icon" aria-hidden="true">🌤️</span>오늘의 컨디션</h2>
+          <div class="badges" data-role="condition-badges"></div>
         </div>
-        <p class="hint" data-role="recommend-hint">걸어서 가까우면서 칸 수가 많은 곳을 먼저 보여 줘요(점수 = 칸 수 ÷ (도보 시간 + 1)). 줄 서는 사람 수(혼잡) 정보는 쓰지 않아요. 거리는 걷는 길(OpenStreetMap)을 따라 잰 값이고, 도보 시간은 가정한 걸음 속도로 계산했어요.</p>
+        <div class="condition-body" data-role="condition-body">
+          <p class="status is-loading">날씨 정보를 불러오는 중이에요…</p>
+        </div>
+      </section>
+
+      <ol class="how-to" aria-label="이렇게 써요">
+        <li><span class="how-num" aria-hidden="true">1</span><span><b>내 상황</b>을 고르거나 문장으로 적어요.</span></li>
+        <li><span class="how-num" aria-hidden="true">2</span><span><b>가고 싶은 곳</b>을 골라요.</span></li>
+        <li><span class="how-num" aria-hidden="true">3</span><span><b>지도</b>와 <b>길안내</b>를 확인해요.</span></li>
+      </ol>
+    </div>
+
+    <!-- ── 내 상황 · 어디 가요 ── -->
+    <div class="screen" data-screen="situation" aria-label="내 상황과 가고 싶은 곳">
+      <section id="profile-select" class="card" aria-labelledby="profile-title">
+        <h2 id="profile-title" class="card-title"><span class="step-num" aria-hidden="true">1</span>지금 내 상황은? <span class="sub">(여러 개 선택 가능)</span></h2>
+
+        <form class="keyword-form" data-role="keyword-form" autocomplete="off">
+          <label for="keyword-input" class="visually-hidden">내 상황을 문장으로 적기</label>
+          <span class="keyword-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="m20 20-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </span>
+          <input id="keyword-input" class="keyword-input" type="text"
+                 placeholder="예: 할머니랑 유모차 끌고 왔어요" enterkeyhint="search">
+          <button type="submit" class="btn btn-primary">확인</button>
+        </form>
+        <p class="keyword-result" data-role="keyword-result" aria-live="polite"></p>
+
+        <fieldset class="profile-options">
+          <legend class="visually-hidden">상황 고르기</legend>
+          <label class="chip">
+            <input type="checkbox" name="profile" value="wheelchair">
+            <span class="chip-icon" aria-hidden="true">♿&#xFE0E;</span>
+            <span class="chip-text">휠체어</span>
+          </label>
+          <label class="chip">
+            <input type="checkbox" name="profile" value="stroller">
+            <span class="chip-icon" aria-hidden="true">👶</span>
+            <span class="chip-text">유아차</span>
+          </label>
+          <label class="chip">
+            <input type="checkbox" name="profile" value="elderly">
+            <span class="chip-icon" aria-hidden="true">🧓</span>
+            <span class="chip-text">오래 못 걷는 동행</span>
+          </label>
+          <label class="chip">
+            <input type="checkbox" name="profile" value="pregnant">
+            <span class="chip-icon" aria-hidden="true">🤰</span>
+            <span class="chip-text">임산부</span>
+          </label>
+          <label class="chip">
+            <input type="checkbox" name="profile" value="concert">
+            <span class="chip-icon" aria-hidden="true">🎤</span>
+            <span class="chip-text">공연 대기</span>
+          </label>
+        </fieldset>
+        <p class="hint">아무것도 고르지 않으면 ‘일반’ 기준으로 안내해요.</p>
+      </section>
+
+      <section id="dest-select" class="card" aria-labelledby="dest-title">
+        <h2 id="dest-title" class="card-title"><span class="step-num" aria-hidden="true">2</span>어디 가요? <span class="sub">(하나만 선택)</span></h2>
+        <div class="dest-options" role="group" aria-label="가고 싶은 곳 고르기">
+          <button type="button" class="dest-btn" data-dest="all" aria-pressed="true"><span class="dest-icon" aria-hidden="true">🗺️</span><span class="dest-text">전체 보기</span></button>
+          <button type="button" class="dest-btn" data-dest="toilet" aria-pressed="false"><span class="dest-icon" aria-hidden="true">🚻</span><span class="dest-text">화장실</span></button>
+          <button type="button" class="dest-btn" data-dest="rest" aria-pressed="false"><span class="dest-icon" aria-hidden="true">🪑</span><span class="dest-text">쉴 곳</span></button>
+          <button type="button" class="dest-btn" data-dest="shop" aria-pressed="false"><span class="dest-icon" aria-hidden="true">🛒</span><span class="dest-text">매점·자판기</span></button>
+          <button type="button" class="dest-btn" data-dest="water" aria-pressed="false"><span class="dest-icon" aria-hidden="true">🚰</span><span class="dest-text">음수대</span></button>
+          <button type="button" class="dest-btn" data-dest="charger" aria-pressed="false"><span class="dest-icon" aria-hidden="true">🔌</span><span class="dest-text">휠체어 충전</span></button>
+          <button type="button" class="dest-btn" data-dest="elevator" aria-pressed="false"><span class="dest-icon" aria-hidden="true">🛗</span><span class="dest-text">지하철 엘리베이터</span></button>
+          <button type="button" class="dest-btn" data-dest="aed" aria-pressed="false"><span class="dest-icon" aria-hidden="true">💓</span><span class="dest-text">AED</span></button>
+          <button type="button" class="dest-btn dest-wide" data-dest="transit" aria-pressed="false"><span class="dest-icon" aria-hidden="true">🚉</span><span class="dest-text">역·버스·택시 <small>교통 브리핑</small></span></button>
+        </div>
+        <p class="hint">내 상황에 맞는 곳에는 <b>추천</b> 표시가 붙어요. 고르면 지도와 목록에 그곳만 남고, 날씨에 맞춰 길안내해요.</p>
+        <!-- 보호자·일행에게 지금 설정 보내기 [팀원1 추가] -->
+        <div class="share-quick">
+          <button type="button" class="btn share-quick-btn" data-role="share-quick"><span aria-hidden="true">🔗</span> 이 설정 공유하기</button>
+          <p class="share-quick-result" data-role="share-quick-result" aria-live="polite">보호자·일행에게 보내면 같은 상황·목적지로 열려요.</p>
+        </div>
+      </section>
+
+      <div class="screen-actions">
+        <button type="button" class="btn" data-go="map">지도에서 보기</button>
+        <button type="button" class="btn btn-primary" data-go="route" data-role="go-route-label">길안내 보기</button>
       </div>
-    </section>
+    </div>
 
-    </div><!-- /.workspace -->
+    <!-- ── 지도 ── -->
+    <div class="screen screen-map" data-screen="map" aria-label="지도">
+      <section id="map-section" class="card map-card" aria-labelledby="map-title">
+        <h2 id="map-title" class="visually-hidden">편의시설 지도</h2>
 
-    <!-- ===== 6. 주차 붐빔 시간 (그래프는 parking.js가 그림) ===== -->
-    <section id="parking-section" class="card" aria-labelledby="parking-title">
-      <h2 id="parking-title" class="card-title"><span class="title-icon" aria-hidden="true">🅿️</span>주차장 붐비는 시간</h2>
-      <p class="sub-line">동2문·남2문·북2문 주차장, 시간대별 평균 주차 대수</p>
+        <div class="map-toolbar">
+        <div class="origin-bar">
+          <span class="origin-title" id="origin-title">출발</span>
+          <button type="button" class="origin-btn origin-gps" data-origin="gps" aria-pressed="false"><span aria-hidden="true">📍</span> 내 위치에서 출발</button>
+        </div>
+          <details class="map-tools">
+            <summary>출발지 · 거르기 · 기호</summary>
+            <div class="map-tools-body">
+              <details class="origin-more" data-role="origin-more">
+                <summary><span data-role="origin-more-label">다른 곳에서 출발</span> <span class="sub">(역·출입문·주차장)</span></summary>
+                <div class="origin-options" role="group" aria-label="다른 출발지 고르기">
+                  <button type="button" class="origin-btn" data-origin="olympic-stn" aria-pressed="false"><span aria-hidden="true">🚇</span> 올림픽공원역</button>
+                  <button type="button" class="origin-btn" data-origin="mongchon-stn" aria-pressed="false"><span aria-hidden="true">🚇</span> 몽촌토성역</button>
+                  <button type="button" class="origin-btn" data-origin="hanseong-stn" aria-pressed="false"><span aria-hidden="true">🚇</span> 한성백제역</button>
+                  <button type="button" class="origin-btn" data-origin="peace-gate" aria-pressed="false"><span aria-hidden="true">🏛️</span> 평화의문(정문)</button>
+                  <button type="button" class="origin-btn" data-origin="s2-parking" aria-pressed="false"><span aria-hidden="true">🅿️</span> 남2문 주차장</button>
+                  <button type="button" class="origin-btn" data-origin="n2-gate" aria-pressed="false"><span aria-hidden="true">🚪</span> 북2문 근처</button>
+                  <button type="button" class="origin-btn" data-origin="center" aria-pressed="true"><span aria-hidden="true">🎯</span> 공원 중심</button>
+                </div>
+              </details>
+              <div class="map-card-head">
+                <div id="filter-bar" role="group" aria-label="화장실 거르기">
+                  <button type="button" class="filter-btn" data-filter="diaper" aria-pressed="false">
+                    <span aria-hidden="true">🚼</span> 기저귀 교환대
+                  </button>
+                  <button type="button" class="filter-btn" data-filter="bell" aria-pressed="false">
+                    <span aria-hidden="true">🔔</span> 비상벨
+                  </button>
+                  <button type="button" class="filter-btn" data-filter="openNow" aria-pressed="false">
+                    <span aria-hidden="true">🕐</span> 운영시간 확인된 곳만
+                  </button>
+                  <button type="button" class="filter-btn" data-filter="femaleStalls" aria-pressed="false"
+                          aria-describedby="female-hint" disabled>
+                    <span aria-hidden="true">🚺</span> 여성 칸 기준
+                  </button>
+                </div>
+              </div>
+              <p id="female-hint" class="hint" data-role="female-hint">‘여성 칸 기준’은 <b>공연 대기</b>를 골랐을 때 쓸 수 있어요.</p>
+              <details class="legend">
+                <summary>지도 기호 보기</summary>
+                <ul class="legend-list">
+                  <li><span class="mk mk-toilet" aria-hidden="true"></span> 화장실</li>
+                  <li><span class="mk mk-toilet-accessible" aria-hidden="true"></span> 장애인 칸 있는 화장실</li>
+                  <li><span class="mk mk-facility" aria-hidden="true"></span> 편의시설(자판기·매점 등)</li>
+                  <li><span class="mk mk-heat" aria-hidden="true"></span> 무더위쉼터</li>
+                  <li><span class="mk mk-cold" aria-hidden="true"></span> 한파쉼터</li>
+                  <li><span class="mk mk-charger" aria-hidden="true"></span> 전동휠체어 충전기</li>
+                  <li><span class="mk mk-elevator" aria-hidden="true"></span> 지하철 엘리베이터</li>
+                  <li><span class="mk mk-aed" aria-hidden="true"></span> 자동심장충격기(AED)</li>
+                  <li><span class="mk mk-subway" aria-hidden="true"></span> 지하철역</li>
+                  <li><span class="mk mk-bus" aria-hidden="true"></span> 버스정류장</li>
+                  <li><span class="mk mk-taxi" aria-hidden="true"></span> 택시 타기 좋은 곳</li>
+                  <li><span class="mk mk-me" aria-hidden="true"></span> 기준 위치(나)</li>
+                </ul>
+              </details>
+            </div>
+          </details>
+        </div>
+        <p class="origin-now" data-role="origin-now" aria-live="polite">지금 출발 위치: 공원 중심 (기본값)</p>
 
-      <div class="chart-box">
-        <canvas id="parking-chart" role="img"
-                aria-label="평일과 주말의 시간대별 평균 주차 대수 그래프. 평일은 오전 10~11시, 주말은 오후 5시에 가장 붐벼요."></canvas>
+        <!-- 지도 (map.js가 그림) -->
+        <div id="map" role="region" aria-label="올림픽공원 편의시설 지도"></div>
+
+        <button type="button" class="map-to-route" data-go="route">길안내 목록 보기</button>
+      </section>
+    </div>
+
+    <!-- ── 길안내 · 추천 ── -->
+    <div class="screen" data-screen="route" aria-label="길안내와 추천">
+      <section class="card rec-card" aria-labelledby="recommend-title">
+        <div id="recommend-list" class="recommend" tabindex="-1" aria-labelledby="recommend-title">
+          <h2 id="recommend-title" class="card-title recommend-title"><span class="title-icon" aria-hidden="true">🚻</span>추천 화장실 <span class="sub">가깝고 칸이 많은 순</span></h2>
+          <p class="recommend-basis" data-role="recommend-basis"></p>
+          <div data-role="recommend-body" aria-live="polite">
+            <p class="status is-loading">추천을 계산하는 중이에요…</p>
+          </div>
+          <p class="hint" data-role="recommend-hint">걸어서 가까우면서 칸 수가 많은 곳을 먼저 보여 줘요(점수 = 칸 수 ÷ (도보 시간 + 1)). 줄 서는 사람 수(혼잡) 정보는 쓰지 않아요. 거리는 걷는 길(OpenStreetMap)을 따라 잰 값이고, 도보 시간은 가정한 걸음 속도로 계산했어요.</p>
+        </div>
+      </section>
+    </div>
+
+    <!-- ── 주차 ── -->
+    <div class="screen" data-screen="parking" aria-label="주차">
+      <section id="parking-section" class="card" aria-labelledby="parking-title">
+        <h2 id="parking-title" class="card-title"><span class="title-icon" aria-hidden="true">🅿️</span>주차장 붐비는 시간</h2>
+        <p class="sub-line">동2문·남2문·북2문 주차장, 시간대별 평균 주차 대수</p>
+
+        <div class="chart-box">
+          <canvas id="parking-chart" role="img"
+                  aria-label="평일과 주말의 시간대별 평균 주차 대수 그래프. 평일은 오전 10~11시, 주말은 오후 5시에 가장 붐벼요."></canvas>
+        </div>
+
+        <ul class="parking-notes">
+          <li><b>평일</b>은 오전 10~11시(평균 약 960대), <b>주말</b>은 오후 5시(평균 약 1,200대)에 가장 붐벼요.</li>
+          <li>가장 붐빈 날은 7월 21일(일) 오후 5시로, 약 2,180대가 주차돼 있었어요(평소 주말의 약 2배).</li>
+          <li>2024년 7월 입출차 기록의 평균이에요. 주차장 전체 면수 정보가 없어서 “몇 % 찼다”는 알 수 없고, 평소보다 붐비는 시간대만 보여드려요.</li>
+        </ul>
+      </section>
+    </div>
+
+    <!-- ── 이용 안내 ── -->
+    <div class="screen" data-screen="info" aria-label="이용 안내">
+      <div class="site-footer info-card">
+        <section aria-labelledby="footer-walk">
+          <h2 id="footer-walk">도보 시간 안내</h2>
+          <p>도보 시간은 걸음 속도를 <b>가정</b>해 계산한 값이에요. 일반·공연 대기는 분당 67m, 휠체어·유아차·오래 못 걷는 동행·임산부는 분당 50m로 계산했어요. 여러 상황을 고르면 가장 느린 속도를 써요. 거리는 OpenStreetMap 걷는 길을 따라 잰 값이고(휠체어·유아차는 계단을 피한 길), 길 데이터로 이어지지 않는 곳만 직선거리로 계산해 ‘직선거리 기준’이라고 표시해요.</p>
+        </section>
+
+        <section aria-labelledby="footer-limits">
+          <h2 id="footer-limits">데이터 한계</h2>
+          <ul>
+            <li>KSPO 올림픽공원 편의시설 정보는 2021년에 한 번 수집된 데이터라 현재와 다를 수 있어요.</li>
+            <li>화장실 좌표는 카카오맵 개방화장실 위치로 보정했어요. 몽촌역사관 화장실은 ‘서울백제어린이박물관 개방화장실’(옛 몽촌역사관 건물로 추정) 좌표를 썼어요.</li>
+            <li>칸 수 정보가 없는 화장실 9곳은 지도에는 보이지만 추천에서는 빠져요.</li>
+            <li>주차장 전체 면수가 없어서 점유율(%)은 계산할 수 없어요.</li>
+            <li>‘공원 경계까지 거리’는 KSPO 편의시설 지점 중 가장 가까운 지점까지의 거리로 계산했어요.</li>
+            <li>지하철역·버스정류장·버스 노선은 OpenStreetMap 데이터라 빠지거나 바뀐 곳이 있을 수 있어요. ‘택시 타기 좋은 곳’은 공식 승강장이 아니라 큰길과 이어지는 출입구를 추천한 곳이에요.</li>
+            <li>길안내 선과 거리는 OpenStreetMap의 보도·산책로·다리 데이터로 계산했어요. 경사·공사·통제 구간은 반영되지 않아요. 추천 목록·팝업의 거리도 같은 길 기준이라 길안내 숫자와 같아요.</li>
+            <li>운영시간이 ‘정시’로 적힌 화장실은 24곳 중 2곳뿐이라(불규칙 13곳, 정보 없음 9곳) ‘운영시간 확인된 곳만’을 켜면 결과가 적어요.</li>
+            <li>AED 데이터 중 설치 위치 설명과 좌표가 맞지 않는 7대(여러 건물이 같은 좌표로 들어 있는 6대, ‘체조경기장 지하1층’인데 좌표가 약 900m 떨어진 1대)는 지도 위치가 실제와 다를 수 있어 응급 화면의 ‘가까운 AED’에서 뺐어요.</li>
+          </ul>
+        </section>
+
+        <section aria-labelledby="footer-sources">
+          <h2 id="footer-sources">데이터 출처 (공공데이터포털)</h2>
+          <ul class="source-list">
+            <li><a href="https://www.data.go.kr/data/15089799/fileData.do" target="_blank" rel="noopener">KSPO 올림픽공원 편의시설 정보</a></li>
+            <li><a href="https://www.data.go.kr/data/15012892/standard.do" target="_blank" rel="noopener">전국공중화장실표준데이터</a></li>
+            <li><a href="https://www.data.go.kr/data/15138735/fileData.do" target="_blank" rel="noopener">올림픽공원 입출차 정보</a></li>
+            <li><a href="https://www.data.go.kr/data/15088159/fileData.do" target="_blank" rel="noopener">서울시 무더위쉼터</a></li>
+            <li><a href="https://www.data.go.kr/data/15088136/fileData.do" target="_blank" rel="noopener">서울시 한파쉼터</a></li>
+            <li><a href="https://www.data.go.kr/data/15034533/standard.do" target="_blank" rel="noopener">전국전동휠체어급속충전기표준데이터</a></li>
+            <li><a href="https://www.data.go.kr/data/15085994/fileData.do" target="_blank" rel="noopener">서울교통공사 전동휠체어 급속충전기 운영 정보</a></li>
+            <li><a href="https://www.data.go.kr/data/15098148/fileData.do" target="_blank" rel="noopener">서울시 지하철역 엘리베이터 위치정보</a></li>
+            <li><a href="https://www.data.go.kr/data/15047371/fileData.do" target="_blank" rel="noopener">서울시 자동심장충격기(AED) 설치정보</a></li>
+            <li><a href="https://www.data.go.kr/data/15012896/standard.do" target="_blank" rel="noopener">전국주차장정보표준데이터</a></li>
+            <li><a href="https://www.data.go.kr/data/15084084/openapi.do" target="_blank" rel="noopener">기상청 단기예보(API)</a></li>
+            <li><a href="https://www.data.go.kr/data/15085288/openapi.do" target="_blank" rel="noopener">기상청 생활기상지수(API)</a></li>
+          </ul>
+          <p>지도: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> 기여자, <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>, <a href="https://maplibre.org" target="_blank" rel="noopener">MapLibre</a> · 그래프: Chart.js</p>
+        </section>
       </div>
-
-      <ul class="parking-notes">
-        <li><b>평일</b>은 오전 10~11시(평균 약 960대), <b>주말</b>은 오후 5시(평균 약 1,200대)에 가장 붐벼요.</li>
-        <li>가장 붐빈 날은 7월 21일(일) 오후 5시로, 약 2,180대가 주차돼 있었어요(평소 주말의 약 2배).</li>
-        <li>2024년 7월 입출차 기록의 평균이에요. 주차장 전체 면수 정보가 없어서 “몇 % 찼다”는 알 수 없고, 평소보다 붐비는 시간대만 보여드려요.</li>
-      </ul>
-    </section>
+    </div>
 
   </main>
 
-  <!-- ===== 맨 아래 안내 ===== -->
-  <footer class="site-footer">
-    <section aria-labelledby="footer-walk">
-      <h2 id="footer-walk">도보 시간 안내</h2>
-      <p>도보 시간은 걸음 속도를 <b>가정</b>해 계산한 값이에요. 일반·공연 대기는 분당 67m, 휠체어·유아차·오래 못 걷는 동행·임산부는 분당 50m로 계산했어요. 여러 상황을 고르면 가장 느린 속도를 써요. 거리는 OpenStreetMap 걷는 길을 따라 잰 값이고(휠체어·유아차는 계단을 피한 길), 길 데이터로 이어지지 않는 곳만 직선거리로 계산해 ‘직선거리 기준’이라고 표시해요.</p>
-    </section>
-
-    <section aria-labelledby="footer-limits">
-      <h2 id="footer-limits">데이터 한계</h2>
-      <ul>
-        <li>KSPO 올림픽공원 편의시설 정보는 2021년에 한 번 수집된 데이터라 현재와 다를 수 있어요.</li>
-        <li>화장실 좌표는 카카오맵 개방화장실 위치로 보정했어요. 몽촌역사관 화장실은 ‘서울백제어린이박물관 개방화장실’(옛 몽촌역사관 건물로 추정) 좌표를 썼어요.</li>
-        <li>칸 수 정보가 없는 화장실 9곳은 지도에는 보이지만 추천에서는 빠져요.</li>
-        <li>주차장 전체 면수가 없어서 점유율(%)은 계산할 수 없어요.</li>
-        <li>‘공원 경계까지 거리’는 KSPO 편의시설 지점 중 가장 가까운 지점까지의 거리로 계산했어요.</li>
-        <li>지하철역·버스정류장·버스 노선은 OpenStreetMap 데이터라 빠지거나 바뀐 곳이 있을 수 있어요. ‘택시 타기 좋은 곳’은 공식 승강장이 아니라 큰길과 이어지는 출입구를 추천한 곳이에요.</li>
-        <li>길안내 선과 거리는 OpenStreetMap의 보도·산책로·다리 데이터로 계산했어요. 경사·공사·통제 구간은 반영되지 않아요. 추천 목록·팝업의 거리도 같은 길 기준이라 길안내 숫자와 같아요.</li>
-        <li>운영시간이 ‘정시’로 적힌 화장실은 24곳 중 2곳뿐이라(불규칙 13곳, 정보 없음 9곳) ‘운영시간 확인된 곳만’을 켜면 결과가 적어요.</li>
-        <li>AED 데이터 중 설치 위치 설명과 좌표가 맞지 않는 7대(여러 건물이 같은 좌표로 들어 있는 6대, ‘체조경기장 지하1층’인데 좌표가 약 900m 떨어진 1대)는 지도 위치가 실제와 다를 수 있어 응급 화면의 ‘가까운 AED’에서 뺐어요.</li>
-      </ul>
-    </section>
-
-    <section aria-labelledby="footer-sources">
-      <h2 id="footer-sources">데이터 출처 (공공데이터포털)</h2>
-      <ul class="source-list">
-        <li><a href="https://www.data.go.kr/data/15089799/fileData.do" target="_blank" rel="noopener">KSPO 올림픽공원 편의시설 정보</a></li>
-        <li><a href="https://www.data.go.kr/data/15012892/standard.do" target="_blank" rel="noopener">전국공중화장실표준데이터</a></li>
-        <li><a href="https://www.data.go.kr/data/15138735/fileData.do" target="_blank" rel="noopener">올림픽공원 입출차 정보</a></li>
-        <li><a href="https://www.data.go.kr/data/15088159/fileData.do" target="_blank" rel="noopener">서울시 무더위쉼터</a></li>
-        <li><a href="https://www.data.go.kr/data/15088136/fileData.do" target="_blank" rel="noopener">서울시 한파쉼터</a></li>
-        <li><a href="https://www.data.go.kr/data/15034533/standard.do" target="_blank" rel="noopener">전국전동휠체어급속충전기표준데이터</a></li>
-        <li><a href="https://www.data.go.kr/data/15085994/fileData.do" target="_blank" rel="noopener">서울교통공사 전동휠체어 급속충전기 운영 정보</a></li>
-        <li><a href="https://www.data.go.kr/data/15098148/fileData.do" target="_blank" rel="noopener">서울시 지하철역 엘리베이터 위치정보</a></li>
-        <li><a href="https://www.data.go.kr/data/15047371/fileData.do" target="_blank" rel="noopener">서울시 자동심장충격기(AED) 설치정보</a></li>
-        <li><a href="https://www.data.go.kr/data/15012896/standard.do" target="_blank" rel="noopener">전국주차장정보표준데이터</a></li>
-        <li><a href="https://www.data.go.kr/data/15084084/openapi.do" target="_blank" rel="noopener">기상청 단기예보(API)</a></li>
-        <li><a href="https://www.data.go.kr/data/15085288/openapi.do" target="_blank" rel="noopener">기상청 생활기상지수(API)</a></li>
-      </ul>
-      <p>지도: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> 기여자, <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>, <a href="https://maplibre.org" target="_blank" rel="noopener">MapLibre</a> · 그래프: Chart.js</p>
-    </section>
-  </footer>
-
-  <!-- ===== 휴대폰 아래쪽 바로가기 (컴퓨터 화면에서는 숨김) ===== -->
-  <nav class="bottom-nav" aria-label="바로가기">
-    <a href="#profile-select"><span aria-hidden="true">🙋</span>내 상황</a>
-    <a href="#dest-select"><span aria-hidden="true">📍</span>어디 가요</a>
-    <a href="#map-section"><span aria-hidden="true">🗺️</span>지도</a>
-    <a href="#recommend-list"><span aria-hidden="true">🚻</span>추천</a>
-    <a href="#parking-section"><span aria-hidden="true">🅿️</span>주차</a>
+  <!-- ===== 아래 탭 (nav.js가 화면을 바꾼다) ===== -->
+  <nav class="tabbar" aria-label="화면 바꾸기">
+    <button type="button" class="tab tab-home" data-go="home" aria-current="page"><span class="tab-icon" aria-hidden="true"></span>홈</button>
+    <button type="button" class="tab tab-situation" data-go="situation"><span class="tab-icon" aria-hidden="true"></span>내 상황</button>
+    <button type="button" class="tab tab-map" data-go="map"><span class="tab-icon" aria-hidden="true"></span>지도</button>
+    <button type="button" class="tab tab-route" data-go="route"><span class="tab-icon" aria-hidden="true"></span>길안내<span class="tab-dot" data-role="route-dot" hidden></span></button>
+    <button type="button" class="tab tab-parking" data-go="parking"><span class="tab-icon" aria-hidden="true"></span>주차</button>
   </nav>
 
   <!-- ===== 공유 창: 링크 + QR코드 (ui.js가 채움) [팀원1 추가] ===== -->
@@ -364,7 +414,7 @@
 
   <noscript><p class="status is-error">이 서비스는 자바스크립트가 켜져 있어야 동작해요.</p></noscript>
 
-  <!-- ===== 스크립트 순서 (팀 약속 7번: 바꾸지 말 것) ===== -->
+  <!-- ===== 스크립트 순서 (팀 약속 7번: 바꾸지 말 것. nav.js는 맨 끝에 덧붙임) ===== -->
   <!-- 1) 외부 라이브러리: MapLibre GL(3D 지도), Chart.js(그래프) -->
   <script src="https://unpkg.com/maplibre-gl@5.24.1/dist/maplibre-gl.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
@@ -373,5 +423,6 @@
   <script src="map.js"></script>      <!-- 팀원1: 지도, 추천 계산 -->
   <script src="weather.js"></script>  <!-- 팀원2: 날씨, 규칙 판단 -->
   <script src="parking.js"></script>  <!-- 팀원2: 주차 그래프 -->
+  <script src="nav.js"></script>      <!-- 휴대폰 화면 바꾸기 (탭·홈 메뉴) -->
 </body>
 </html>

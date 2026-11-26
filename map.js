@@ -72,6 +72,34 @@
     concert: ['toilet', 'shop'],
   };
   const WALK_RING_MIN = 5;                     // 기준 위치 둘레에 그릴 '도보 N분' 원
+  // 쉬어 가는 길 [새 기능 2]
+  //  오래 못 걷는 동행·임산부를 고르면, 정한 시간(분)보다 오래 쉴 곳 없이 걷는 구간에 쉬어 갈 곳을 끼워 넣는다.
+  //  쉴 곳 = 화장실, 무더위·한파쉼터(회원 전용 제외), 매점·편의점·자판기 등. 공공데이터에 벤치 위치는 없다.
+  const REST_PROFILES = ['elderly', 'pregnant'];
+  const REST_EVERY_OPTIONS = [0, 5, 10, 15];   // 지도 위 '쉬어 가기' 버튼 (0 = 끄기)
+  const REST_EVERY_DEFAULT = 10;               // 처음 값(분)
+  const REST_MAX_STOPS = 5;                    // 한 번의 길안내에 넣는 쉬어 갈 곳 최대 개수
+  const REST_MAX_DETOUR_M = 150;               // 쉬어 갈 곳 하나 때문에 더 걷는 거리 한도(m, 가정값)
+  const REST_STRETCH = 1.6;                    // 정한 시간 안에 쉴 곳이 없으면, 이 배수까지 넓혀서 가장 알맞은 곳을 찾는다
+  // N분 안에 갈 수 있는 곳 [새 기능 3]
+  //  기준 위치에서 실제 걷는 길(계단·흡연구역 규칙 포함)을 따라 5·10·15분 안에 닿는 길을 색칠하고,
+  //  그 안에 있는 화장실·쉴 곳·AED 수를 보여 준다. 걸음 속도는 지금처럼 상황별 가정값(분당 67m 또는 50m).
+  const REACH_MINUTES = [5, 10, 15];
+  const REACH_COLORS = ['#0369a1', '#0ea5e9', '#7dd3fc'];   // 5분 · 10분 · 15분 (진한 색일수록 가까움)
+  const REACH_WIDTHS = [4.5, 3.5, 2.5];
+  // 편의시설 공백 지도 = KSPO 제안 모드 [새 기능 4]
+  //  주소 뒤에 ?report 를 붙였을 때만 켜진다. 공원 안 걷는 길마다 '가장 가까운 장애인 칸 화장실(또는 쉴 곳)까지
+  //  몇 분인지'를 계산해 먼 구역을 색칠하고, 칸 수·운영시간 정보가 빠진 화장실을 표시한다. 발표·제안서용.
+  const REPORT_MODE = (() => { try { return /[?&]report(=|&|$)/.test(window.location.search); } catch (e) { return false; } })();
+  const GAP_WARN_MIN = 5;          // 이보다 멀면 주황
+  const GAP_FAR_MIN = 10;          // 이보다 멀면 빨강
+  const GAP_PARK_M = 200;          // 공원 시설(화장실·편의시설)에서 이 거리 안의 길만 '공원 안'으로 센다(가정값)
+  const GAP_COLORS = { warn: '#f59e0b', far: '#dc2626', nostall: '#7c3aed', nohours: '#64748b' };
+  const GAP_KINDS = {
+    toilet: { label: '장애인 칸 화장실', speed: 50, steps: 'avoid', who: '휠체어(분당 50m, 계단 없는 길)' },
+    rest: { label: '쉴 곳', speed: 50, steps: 'slow', who: '오래 못 걷는 동행(분당 50m)' },
+  };
+  const REST_STOP_RE = /자판기|편의점|매점|식음|카페|휴게|쉼터|벤치|그늘/;   // 편의시설 중 쉬어 갈 곳으로 볼 종류
   // 현장 제보용 구글 폼 주소. 비어 있으면 팝업의 '정보가 달라요' 버튼을 숨긴다 [팀원1 추가]
   const REPORT_FORM_URL = '';
   // 응급 화면에 보여 줄 가까운 AED 수 [팀원1 추가]
@@ -373,6 +401,15 @@
     destTarget: null,    // 목록에서 직접 고른 목적지 ('위도,경도'). 없으면 1순위로 길안내
     lastDest: 'all',
     walk: null,          // 걷는 길 그래프 (불러오면 길안내 선이 길을 따라간다. 없으면 직선)
+    restEveryMin: REST_EVERY_DEFAULT,   // 쉬어 가기 간격(분). 0이면 끔 [새 기능 2]
+    restEl: null,                       // 지도 위 '쉬어 가기' 버튼 묶음 [새 기능 2]
+    reachOn: false,                     // 'N분 안에 갈 수 있는 곳' 켜짐 여부 [새 기능 3]
+    reachEl: null,                      // 그 버튼과 요약 칸 [새 기능 3]
+    reachKey: '',                       // 마지막으로 계산한 조건 (같으면 다시 계산하지 않는다)
+    gapKind: 'toilet',                  // KSPO 제안 모드에서 보는 기준: 'toilet' | 'rest' [새 기능 4]
+    gapEl: null,
+    gapKey: '',
+    inPark: null,                       // 걷는 길의 점마다 공원 안이면 1
   };
 
   const ll = (lat, lng) => [lng, lat]; // MapLibre는 [경도, 위도] 순서다(Leaflet과 반대!)
@@ -450,6 +487,41 @@ ${kindVars}
 :where(.op-legend){border-top:1px solid #e2e8f0;margin-top:6px;padding:7px 6px 0;font-size:11.5px;color:#64748b;line-height:1.55}
 :where(.op-legend i){display:inline-block;width:16px;height:0;border-top:2px dashed #2563eb;vertical-align:middle;margin-right:4px}
 :where(.op-legend i.ring){border-top-color:#0ea5e9}
+:where(.op-legend i.smoke){border-top:2px dotted #6b7280}
+:where(.op-rest:not([hidden])){display:flex;flex-wrap:wrap;align-items:center;gap:4px;background:rgba(255,255,255,.96);border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.15);padding:7px 8px;max-width:min(250px,64vw);color:#0f172a}
+:where(.op-rest-title){width:100%;font:800 12.5px system-ui,sans-serif;margin:0 2px 2px}
+:where(.op-rest button){border:1px solid #cbd5e1;background:#fff;color:#0f172a;border-radius:999px;padding:5px 9px;min-height:30px;font:700 12px system-ui,sans-serif;cursor:pointer}
+:where(.op-rest button.is-on){background:var(--c-primary,#0d55cf);border-color:var(--c-primary,#0d55cf);color:#fff}
+html[data-theme="dark"] .op-rest{background:rgba(29,39,34,.96);color:#e5e7eb}
+html[data-theme="dark"] .op-rest button{background:#24302a;border-color:#3a4a42;color:#e5e7eb}
+html[data-theme="dark"] .op-rest button.is-on{background:var(--c-primary,#7aa7ff);border-color:var(--c-primary,#7aa7ff);color:#0b1220}
+:where(.op-legend i.reach){border-top:3px solid #0ea5e9}
+:where(.op-reach){background:rgba(255,255,255,.96);border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.15);padding:6px;max-width:min(250px,64vw);color:#0f172a}
+:where(.op-reach-btn){display:block;width:100%;border:1px solid #cbd5e1;background:#fff;color:#0f172a;border-radius:999px;padding:6px 10px;min-height:32px;font:700 12.5px system-ui,sans-serif;cursor:pointer}
+:where(.op-reach-btn.is-on){background:var(--c-primary,#0d55cf);border-color:var(--c-primary,#0d55cf);color:#fff}
+:where(.op-reach-sum){padding:6px 4px 2px;font-size:11.5px;line-height:1.55;color:#334155}
+:where(.op-reach-sum ul){list-style:none;margin:0;padding:0}
+:where(.op-reach-sum li i){display:inline-block;width:14px;height:0;border-top:4px solid;border-radius:2px;vertical-align:middle;margin-right:5px}
+:where(.op-reach-sum p){margin:4px 0 0;color:#64748b}
+html[data-theme="dark"] .op-reach{background:rgba(29,39,34,.96);color:#e5e7eb}
+html[data-theme="dark"] .op-reach-btn{background:#24302a;border-color:#3a4a42;color:#e5e7eb}
+html[data-theme="dark"] .op-reach-btn.is-on{background:#0ea5e9;border-color:#0ea5e9;color:#04121c}
+html[data-theme="dark"] .op-reach-sum{color:#cbd5e1}
+:where(.op-gap){background:rgba(255,255,255,.97);border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.18);padding:9px 10px;width:min(300px,72vw);max-height:60vh;overflow:auto;color:#0f172a;font-size:12px;line-height:1.55}
+:where(.op-gap-title){margin:0 0 6px;font:800 13px system-ui,sans-serif;color:#b91c1c}
+:where(.op-gap-tabs){display:flex;gap:4px;margin-bottom:6px}
+:where(.op-gap-tabs button){flex:1;border:1px solid #cbd5e1;background:#fff;color:#0f172a;border-radius:999px;padding:5px 6px;min-height:30px;font:700 11.5px system-ui,sans-serif;cursor:pointer}
+:where(.op-gap-tabs button.is-on){background:#b91c1c;border-color:#b91c1c;color:#fff}
+:where(.op-gap ul){list-style:none;margin:0;padding:0}
+:where(.op-gap li){margin:2px 0}
+:where(.op-gap li i){display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:middle;margin-right:5px}
+:where(.op-gap li i.bar){width:14px;height:0;border-radius:2px;border-top:4px solid;background:none}
+:where(.op-gap-sub){margin:7px 0 2px;font-weight:800}
+:where(.op-gap-note){margin:7px 0 0;color:#64748b;font-size:11px}
+html[data-theme="dark"] .op-gap{background:rgba(29,39,34,.97);color:#e5e7eb}
+html[data-theme="dark"] .op-gap-tabs button{background:#24302a;border-color:#3a4a42;color:#e5e7eb}
+html[data-theme="dark"] .op-gap-tabs button.is-on{background:#ef4444;border-color:#ef4444;color:#fff}
+html[data-theme="dark"] .op-gap-note{color:#9ca3af}
 :where(.op-legend i.route){border-top:3px dashed ${ROUTE_COLOR}}
 :where(.op-view button){font:800 12px system-ui,sans-serif;color:#0f172a}
 :where(.op-view button.is-on){background:#e0e7ff;color:#3730a3}
@@ -572,6 +644,120 @@ ${kindVars}
     if (skipped) console.warn('[map.js] 좌표가 없거나 잘못된 항목 ' + skipped + '개는 지도에서 뺐어요.');
 
     S.map.addControl(new LayerControl(), 'top-left');
+    // 쉬어 가기 간격 버튼 (오래 못 걷는 동행·임산부를 골랐을 때만 보임) [새 기능 2]
+    const rc = new RestControl();
+    S.map.addControl(rc, 'top-left');
+    S.restEl = rc._div;
+    updateRestControl();
+    // N분 안에 갈 수 있는 곳 버튼 [새 기능 3]
+    const rh = new ReachControl();
+    S.map.addControl(rh, 'top-left');
+    S.reachEl = rh._div;
+    // KSPO 제안 모드 (?report 일 때만) [새 기능 4]
+    if (REPORT_MODE) {
+      const gc = new GapControl();
+      S.map.addControl(gc, 'top-right');
+      S.gapEl = gc._div;
+    }
+  }
+
+  // ───── 편의시설 공백 지도(KSPO 제안 모드): 판 [새 기능 4] ─────
+  function GapControl() {}
+  GapControl.prototype.onAdd = function () {
+    const div = document.createElement('div');
+    div.className = 'maplibregl-ctrl op-gap';
+    div.setAttribute('role', 'region');
+    div.setAttribute('aria-label', 'KSPO 제안 모드: 편의시설 공백 지도');
+    const h = document.createElement('p');
+    h.className = 'op-gap-title';
+    h.textContent = 'KSPO 제안 모드 · 편의시설 공백 지도';
+    const tabs = document.createElement('div');
+    tabs.className = 'op-gap-tabs';
+    tabs.setAttribute('role', 'group');
+    tabs.setAttribute('aria-label', '무엇까지의 거리로 볼지');
+    Object.keys(GAP_KINDS).forEach((k) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.kind = k;
+      b.textContent = GAP_KINDS[k].label + '까지';
+      b.addEventListener('click', () => { S.gapKind = k; S.gapKey = ''; updateGap(); });
+      tabs.appendChild(b);
+    });
+    const body = document.createElement('div');
+    body.className = 'op-gap-body';
+    body.setAttribute('aria-live', 'polite');
+    body.innerHTML = '<p>걷는 길 데이터를 불러오는 중이에요.</p>';
+    div.append(h, tabs, body);
+    this._div = div;
+    return div;
+  };
+  GapControl.prototype.onRemove = function () { this._div.remove(); };
+
+  // ───── N분 안에 갈 수 있는 곳: 버튼과 요약 [새 기능 3] ─────
+  function ReachControl() {}
+  ReachControl.prototype.onAdd = function () {
+    const div = document.createElement('div');
+    div.className = 'maplibregl-ctrl op-reach';
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'op-reach-btn';
+    b.setAttribute('aria-pressed', 'false');
+    b.textContent = '걸어서 갈 수 있는 범위';
+    b.addEventListener('click', () => {
+      S.reachOn = !S.reachOn;
+      S.reachKey = '';
+      b.setAttribute('aria-pressed', String(S.reachOn));
+      b.classList.toggle('is-on', S.reachOn);
+      updateOverlays();
+    });
+    const sum = document.createElement('div');
+    sum.className = 'op-reach-sum';
+    sum.setAttribute('aria-live', 'polite');
+    sum.hidden = true;
+    div.append(b, sum);
+    this._div = div;
+    return div;
+  };
+  ReachControl.prototype.onRemove = function () { this._div.remove(); };
+
+  // ───── 쉬어 가기 간격 버튼 [새 기능 2] ─────
+  function RestControl() {}
+  RestControl.prototype.onAdd = function () {
+    const div = document.createElement('div');
+    div.className = 'maplibregl-ctrl op-rest';
+    div.hidden = true;
+    div.setAttribute('role', 'group');
+    div.setAttribute('aria-label', '쉬어 가기 간격');
+    const t = document.createElement('span');
+    t.className = 'op-rest-title';
+    t.textContent = '쉬어 가기';
+    div.appendChild(t);
+    REST_EVERY_OPTIONS.forEach((m) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.min = String(m);
+      b.textContent = m ? m + '분마다' : '끄기';
+      b.addEventListener('click', () => {
+        S.restEveryMin = m;
+        updateRestControl();
+        recompute();
+      });
+      div.appendChild(b);
+    });
+    this._div = div;
+    return div;
+  };
+  RestControl.prototype.onRemove = function () { this._div.remove(); };
+
+  function updateRestControl() {
+    if (!S.restEl) return;
+    const profiles = ensureAppState().profiles || [];
+    S.restEl.hidden = !profiles.some((p) => REST_PROFILES.includes(p));
+    S.restEl.querySelectorAll('button').forEach((b) => {
+      const on = Number(b.dataset.min) === S.restEveryMin;
+      b.classList.toggle('is-on', on);
+      b.setAttribute('aria-pressed', String(on));
+    });
   }
 
   function setLayerVisible(key, visible) {
@@ -628,6 +814,8 @@ ${kindVars}
     legend.className = 'op-legend';
     legend.innerHTML = '<div><i class="route"></i>추천 동선: 들를 곳 순서(상황을 고르면 보여요)</div><div><i></i>추천 화장실까지 연결</div>' +
       '<div><i class="ring"></i>기준 위치에서 도보 ' + WALK_RING_MIN + '분 범위(가정 속도)</div>' +
+      '<div><i class="reach"></i>걸어서 갈 수 있는 범위: 진할수록 가까워요(5·10·15분, 버튼으로 켜요)</div>' +
+      '<div><i class="smoke"></i>흡연구역 ' + SMOKE_RADIUS_M + 'm 둘레(임산부·유아차를 고르면 피해 가요)</div>' +
       '<div><b>동선 선은 OpenStreetMap 걷는 길을 따라가요(경사·공사 미반영). 화장실 연결선은 직선이에요.</b></div>' +
       '<div>지도를 누르거나 ● 기준 핀을 끌어 기준 위치를 바꿀 수 있어요.</div>';
     body.appendChild(legend);
@@ -1240,9 +1428,11 @@ ${kindVars}
     const wx = weatherRouteInfo(profiles, now);
     const path = best.stops.map((s) => ({ e: s.e, need: s.g.need, label: s.g.label }));
     insertWeatherStop(path, wx, profiles);
+    const restNotes = [];
+    insertRestStops(path, profiles, speed, now, restNotes);   // [새 기능 2]
     return buildPlan(path, {
       profiles: profiles, speed: speed, missing: missing, basis: basis,
-      title: '추천 동선', weather: wx,
+      title: '추천 동선', weather: wx, restNotes: restNotes,
     });
   }
 
@@ -1253,6 +1443,8 @@ ${kindVars}
     const geometry = [[S.origin.lat, S.origin.lng]];
     let allPath = path.length > 0;
     let stepsUsed = false;
+    let smokeNearM = 0;        // 흡연구역 근처를 지나는 거리 합(m) [새 기능 1]
+    let smokeDetourM = null;   // 흡연구역을 피하느라 더 걷는 거리 합(m). null이면 피한 구간 없음
     const stops = path.map((x, i) => {
       // 걷는 길 그래프가 있으면 길을 따라 재고, 없거나 길에서 너무 멀면 직선으로 잰다
       const leg = walkLeg(pos, x.e.item, o.profiles);
@@ -1260,6 +1452,8 @@ ${kindVars}
       if (leg) {
         leg.coords.slice(1).forEach((c) => geometry.push(c));
         if (leg.steps) stepsUsed = true;
+        if (leg.smokeM > 0) smokeNearM += leg.smokeM;
+        if (leg.smokeDetourM !== null && leg.smokeDetourM !== undefined) smokeDetourM = (smokeDetourM || 0) + leg.smokeDetourM;
       } else {
         allPath = false;
         geometry.push([x.e.item.lat, x.e.item.lng]);
@@ -1278,6 +1472,19 @@ ${kindVars}
     const avoid = stepsMode(o.profiles) === 'avoid';
     if (stepsUsed && avoid) pathNotes.push('계단 없는 길을 찾지 못해 계단이 있는 구간이 들어갔어요. 현장 안내를 확인하세요.');
     if (stops.some((x) => x.legPath) && !allPath) pathNotes.push('일부 구간은 길 데이터가 없어 직선으로 표시했어요.');
+    (o.restNotes || []).forEach((n) => pathNotes.push(n));   // 쉬어 가기 안내 [새 기능 2]
+    // 흡연구역 안내 [새 기능 1] — 임산부·유아차를 골랐을 때만
+    const smokeOn = smokeAvoid(o.profiles) && !!(S.walk && S.walk.smokeCount);
+    const smokeNear = smokeNearM > 0;
+    const nearTxt = '약 ' + Math.max(10, Math.round(smokeNearM / 10) * 10) + 'm';
+    if (smokeOn && smokeNear && smokeDetourM !== null) {
+      pathNotes.push('흡연구역 근처를 되도록 피했지만, ' + nearTxt + '는 흡연구역 ' + SMOKE_RADIUS_M + 'm 안을 지나요.');
+    } else if (smokeOn && smokeNear) {
+      pathNotes.push('흡연구역 ' + SMOKE_RADIUS_M + 'm 안을 ' + nearTxt + ' 지나요. 피해 갈 길이 없거나 너무 많이 돌아가야 해서 그대로 두었어요.');
+    } else if (smokeOn && smokeDetourM !== null) {
+      const extraMin = Math.round(smokeDetourM / o.speed);
+      pathNotes.push('흡연구역을 피해 돌아가는 길이에요' + (extraMin >= 1 ? '(약 ' + extraMin + '분 더 걸려요).' : '(걷는 시간은 거의 같아요).'));
+    }
     return {
       profiles: o.profiles.slice(),
       title: o.title,                 // '추천 동선' 또는 '길안내' (ui.js가 제목으로 씀)
@@ -1294,6 +1501,10 @@ ${kindVars}
       geometry: geometry,             // 지도에 그릴 선 [[위도, 경도], ...]
       pathNotes: pathNotes,           // 길 관련 주의(계단 등)
       stepsAvoided: avoid && !stepsUsed,
+      smokeAvoided: smokeOn && smokeDetourM !== null,   // [새 기능 1] 흡연구역을 피하려고 길을 바꿈
+      smokeNearM: smokeOn ? Math.round(smokeNearM) : 0, // [새 기능 1] 그래도 흡연구역 근처를 지나는 거리(m)
+      restEveryMin: restOn(o.profiles) ? S.restEveryMin : 0,        // [새 기능 2] 쉬어 가기 간격(분). 0이면 꺼짐
+      restStops: stops.filter((x) => x.need === 'rest-break').length, // [새 기능 2] 넣은 쉬어 갈 곳 수
     };
   }
 
@@ -1451,12 +1662,72 @@ ${kindVars}
   // 휠체어·유아차는 계단을 피하고, 오래 못 걷는 동행·임산부는 계단을 3배 길게 쳐서 되도록 피한다.
   const SNAP_MAX_M = 200;      // 시설에서 이보다 먼 길밖에 없으면 그 구간은 직선으로 (가정값)
   const STEP_SLOW_FACTOR = 3;
+  // 흡연구역 피해 가는 길 [새 기능 1]
+  //  임산부·유아차를 고르면 흡연구역에서 SMOKE_RADIUS_M 안을 지나는 길을 SMOKE_FACTOR배 길게 쳐서 되도록 돌아간다.
+  //  아예 막지는 않는다(돌아갈 길이 없을 수도 있어서). 두 숫자 모두 우리가 정한 가정값이다.
+  const SMOKE_RADIUS_M = 30;
+  const SMOKE_FACTOR = 3;
+  const SMOKE_PROFILES = ['pregnant', 'stroller'];
 
   function stepsMode(profiles) {
     profiles = profiles || [];
     if (profiles.includes('wheelchair') || profiles.includes('stroller')) return 'avoid';
     if (profiles.includes('elderly') || profiles.includes('pregnant')) return 'slow';
     return 'normal';
+  }
+
+  function stepFactorOf(mode) {
+    return mode === 'avoid' ? Infinity : mode === 'slow' ? STEP_SLOW_FACTOR : 1;
+  }
+
+  // ───── 흡연구역 피해 가는 길 [새 기능 1] ─────
+  // 임산부·유아차 중 하나라도 고르면 true
+  function smokeAvoid(profiles) {
+    return (profiles || []).some((p) => SMOKE_PROFILES.includes(p));
+  }
+
+  // KSPO 편의시설 데이터 중 '흡연구역' (좌표가 있는 곳만)
+  function smokePoints() {
+    if (!S.data || !Array.isArray(S.data.facilities)) return [];
+    return S.data.facilities.filter((f) => /흡연/.test(String(f.type || '')) &&
+      num(f.lat) !== null && num(f.lng) !== null);
+  }
+
+  // 걷는 길 그래프의 선마다 '흡연구역 근처' 표시를 한 번만 붙인다.
+  // 선의 양 끝이나 가운데 점이 흡연구역에서 SMOKE_RADIUS_M 안에 있으면 근처로 본다.
+  function ensureSmoke() {
+    const W = S.walk;
+    if (!W || W.smoke || !S.data) return;
+    const pts = smokePoints().map((f) => ({ lat: Number(f.lat), lng: Number(f.lng) }));
+    W.smoke = new Uint8Array(W.to.length);
+    W.smokeCount = pts.length;
+    if (!pts.length) return;
+    const near = (la, ln) => pts.some((p) => haversine(la, ln, p.lat, p.lng) <= SMOKE_RADIUS_M);
+    // 계산을 줄이려고, 흡연구역에서 넉넉히(300m) 먼 점은 건너뛴다
+    const far = (la, ln) => pts.every((p) => Math.abs(la - p.lat) > 0.003 || Math.abs(ln - p.lng) > 0.004);
+    for (let u = 0; u < W.N; u++) {
+      if (far(W.lat[u], W.lng[u])) continue;
+      for (let k = W.off[u]; k < W.off[u + 1]; k++) {
+        const v = W.to[k];
+        const mLat = (W.lat[u] + W.lat[v]) / 2, mLng = (W.lng[u] + W.lng[v]) / 2;
+        if (near(W.lat[u], W.lng[u]) || near(W.lat[v], W.lng[v]) || near(mLat, mLng)) W.smoke[k] = 1;
+      }
+    }
+    // 반대 방향 선도 같은 표시로 맞춘다
+    for (let u = 0; u < W.N; u++) {
+      for (let k = W.off[u]; k < W.off[u + 1]; k++) {
+        if (!W.smoke[k]) continue;
+        const v = W.to[k];
+        for (let j = W.off[v]; j < W.off[v + 1]; j++) if (W.to[j] === u) W.smoke[j] = 1;
+      }
+    }
+  }
+
+  // 선 하나를 지날 때 드는 '길이 값' (실제 거리가 아니라 길 고르기에만 쓴다)
+  function edgeCost(W, k, stepFactor, smokeFactor) {
+    let w = W.step[k] ? W.len[k] * stepFactor : W.len[k];
+    if (smokeFactor !== 1 && W.smoke && W.smoke[k]) w *= smokeFactor;
+    return w;
   }
 
   function buildWalkGraph(j) {
@@ -1510,8 +1781,9 @@ ${kindVars}
     return res;
   }
 
-  // A* 가장 짧은 길. stepFactor: Infinity면 계단 못 지나감
-  function astar(s, t, stepFactor) {
+  // A* 가장 짧은 길. stepFactor: Infinity면 계단 못 지나감. smokeFactor: 흡연구역 근처 선을 몇 배로 칠지(기본 1)
+  function astar(s, t, stepFactor, smokeFactor) {
+    if (smokeFactor === undefined) smokeFactor = 1;
     const W = S.walk;
     const g = new Float64Array(W.N).fill(Infinity);
     const prev = new Int32Array(W.N).fill(-1);
@@ -1550,7 +1822,7 @@ ${kindVars}
       for (let k = W.off[u]; k < W.off[u + 1]; k++) {
         const v = W.to[k];
         if (done[v]) continue;
-        const w = W.step[k] ? W.len[k] * stepFactor : W.len[k];
+        const w = edgeCost(W, k, stepFactor, smokeFactor);
         if (!isFinite(w)) continue;
         const nd = g[u] + w;
         if (nd < g[v]) { g[v] = nd; prev[v] = u; push(nd + h(v), v); }
@@ -1562,37 +1834,54 @@ ${kindVars}
     nodes.reverse();
     let meters = 0;
     let steps = false;
+    let smokeM = 0;   // 흡연구역 근처를 지난 거리(m)
     for (let i = 1; i < nodes.length; i++) {
       const a = nodes[i - 1], b = nodes[i];
       for (let k = W.off[a]; k < W.off[a + 1]; k++) {
-        if (W.to[k] === b) { meters += W.len[k]; if (W.step[k]) steps = true; break; }
+        if (W.to[k] === b) {
+          meters += W.len[k];
+          if (W.step[k]) steps = true;
+          if (W.smoke && W.smoke[k]) smokeM += W.len[k];
+          break;
+        }
       }
     }
-    return { nodes: nodes, meters: meters, steps: steps };
+    return { nodes: nodes, meters: meters, steps: steps, smokeM: smokeM };
   }
 
   // 두 지점 사이 걷는 길: { coords: [[위도, 경도], ...], meters, steps } 또는 null(그래프 없음·길에서 너무 멂·이어진 길 없음)
   function walkLeg(a, b, profiles) {
     if (!S.walk) return null;
+    ensureSmoke();
     const mode = stepsMode(profiles);
-    const ck = a.lat + ',' + a.lng + '>' + b.lat + ',' + b.lng + '|' + mode;
+    const sm = smokeAvoid(profiles);
+    const ck = a.lat + ',' + a.lng + '>' + b.lat + ',' + b.lng + '|' + mode + (sm ? '|smoke' : '');
     if (S.walk.legCache.has(ck)) return S.walk.legCache.get(ck);
-    const res = walkLegRaw(a, b, mode);
+    const res = walkLegRaw(a, b, mode, sm);
     if (S.walk.legCache.size > 2000) S.walk.legCache.clear();
     S.walk.legCache.set(ck, res);
     return res;
   }
 
-  function walkLegRaw(a, b, mode) {
+  // sm: true면 흡연구역 근처를 되도록 피한다 [새 기능 1]
+  function walkLegRaw(a, b, mode, sm) {
     const sa = snapNode(a);
     const sb = snapNode(b);
     if (!sa || !sb || sa.m > SNAP_MAX_M || sb.m > SNAP_MAX_M) return null;
-    let r = astar(sa.i, sb.i, mode === 'avoid' ? Infinity : mode === 'slow' ? STEP_SLOW_FACTOR : 1);
-    if (!r && mode === 'avoid') r = astar(sa.i, sb.i, STEP_SLOW_FACTOR);   // 계단 없는 길이 없으면 계단 포함
+    const smokeF = sm && S.walk.smokeCount ? SMOKE_FACTOR : 1;
+    let stepF = stepFactorOf(mode);
+    let r = astar(sa.i, sb.i, stepF, smokeF);
+    if (!r && mode === 'avoid') { stepF = STEP_SLOW_FACTOR; r = astar(sa.i, sb.i, stepF, smokeF); }   // 계단 없는 길이 없으면 계단 포함
     if (!r) return null;
+    // 흡연구역을 피했다면, 피하지 않았을 때의 길과 비교해서 얼마나 더 걷는지 잰다
+    let smokeDetourM = null;   // null: 피할 필요가 없었거나 피하지 않음 / 숫자: 피하느라 더 걷는 거리(m)
+    if (smokeF !== 1) {
+      const plain = astar(sa.i, sb.i, stepF, 1);
+      if (plain && plain.smokeM > r.smokeM) smokeDetourM = Math.max(0, r.meters - plain.meters);
+    }
     const W = S.walk;
     const coords = [[a.lat, a.lng]].concat(r.nodes.map((i) => [W.lat[i], W.lng[i]]), [[b.lat, b.lng]]);
-    return { coords: coords, meters: sa.m + r.meters + sb.m, steps: r.steps };
+    return { coords: coords, meters: sa.m + r.meters + sb.m, steps: r.steps, smokeM: r.smokeM, smokeDetourM: smokeDetourM };
   }
 
   // ───── 10-4-1. 한 곳에서 여러 곳까지 걷는 거리 한꺼번에 재기 [팀원1 추가] ─────
@@ -1629,7 +1918,8 @@ ${kindVars}
   }
 
   // 결과: 점마다 실제 걷는 거리(m). 길 고르기는 계단 가중치(stepFactor)를 넣어서 한다
-  function dijkstra(s, stepFactor) {
+  function dijkstra(s, stepFactor, smokeFactor) {
+    if (smokeFactor === undefined) smokeFactor = 1;
     const W = S.walk;
     const cost = new Float64Array(W.N).fill(Infinity);
     const meters = new Float64Array(W.N).fill(Infinity);
@@ -1645,7 +1935,7 @@ ${kindVars}
       for (let k = W.off[u]; k < W.off[u + 1]; k++) {
         const v = W.to[k];
         if (done[v]) continue;
-        const w = W.step[k] ? W.len[k] * stepFactor : W.len[k];
+        const w = edgeCost(W, k, stepFactor, smokeFactor);
         if (!isFinite(w)) continue;
         const nd = cost[u] + w;
         if (nd < cost[v]) { cost[v] = nd; meters[v] = meters[u] + W.len[k]; heap.push(nd, v); }
@@ -1657,22 +1947,24 @@ ${kindVars}
   // from에서 p까지 걷는 거리(m)를 돌려주는 함수. 길 데이터가 없거나 from이 길에서 너무 멀면 null
   function walkDistFrom(from, profiles) {
     if (!S.walk || !from) return null;
+    ensureSmoke();
     const W = S.walk;
     const mode = stepsMode(profiles);
-    const key = from.lat + ',' + from.lng + '|' + mode;
+    const smokeF = smokeAvoid(profiles) && W.smokeCount ? SMOKE_FACTOR : 1;
+    const key = from.lat + ',' + from.lng + '|' + mode + (smokeF !== 1 ? '|smoke' : '');
     if (!W.distCache) W.distCache = new Map();
     if (W.distCache.has(key)) return W.distCache.get(key);
     const so = snapNode(from);
     let fn = null;
     if (so && so.m <= SNAP_MAX_M) {
-      const main = dijkstra(so.i, mode === 'avoid' ? Infinity : mode === 'slow' ? STEP_SLOW_FACTOR : 1);
+      const main = dijkstra(so.i, stepFactorOf(mode), smokeF);
       let backup = null;   // 계단 없이 못 가는 곳만 계단 포함 길로 다시 잰다(필요할 때 한 번만)
       fn = (p) => {
         const sp = snapNode({ lat: Number(p.lat), lng: Number(p.lng) });
         if (!sp || sp.m > SNAP_MAX_M) return null;
         let m = main[sp.i];
         if (!isFinite(m) && mode === 'avoid') {
-          if (!backup) backup = dijkstra(so.i, STEP_SLOW_FACTOR);
+          if (!backup) backup = dijkstra(so.i, STEP_SLOW_FACTOR, smokeF);
           m = backup[sp.i];
         }
         return isFinite(m) ? so.m + m + sp.m : null;
@@ -1974,6 +2266,103 @@ ${kindVars}
     if (best.extra >= 30) wx.notes.push('경유지 때문에 약 ' + Math.round(best.extra).toLocaleString() + 'm 더 걸어요.');
   }
 
+  // ───── 쉬어 가는 길 [새 기능 2] ─────
+  function restOn(profiles) {
+    return (profiles || []).some((p) => REST_PROFILES.includes(p)) && S.restEveryMin > 0;
+  }
+
+  function restBreakCands(now) {
+    return S.entries.filter((e) =>
+      (e.cat === 'toilet' && toiletOpenNow(e.item, now) !== false) ||
+      ((e.cat === 'heat' || e.cat === 'cold') && shelterStatus(e, now) !== false && !membersOnly(e) &&
+        !/회원/.test(String(e.item.facility || ''))) ||   // 회원만 쓰는 경로당 무더위쉼터도 뺀다
+      (e.cat === 'facility' && REST_STOP_RE.test(facTypeOf(e))));
+  }
+
+  function restLabel(e) {
+    if (e.cat === 'toilet') return '쉬어 가기 · 화장실';
+    if (e.cat === 'heat' || e.cat === 'cold') return '쉬어 가기 · 쉼터';
+    return '쉬어 가기 · ' + (facTypeOf(e) || '편의시설');
+  }
+
+  // 두 곳 사이 걷는 거리(m). 걷는 길이 없으면 직선거리
+  function legMeters(a, b, profiles) {
+    const l = walkLeg(a, b, profiles);
+    return l ? l.meters : haversine(a.lat, a.lng, b.lat, b.lng);
+  }
+
+  // prev → next 구간에서 쉬어 갈 곳 하나 고르기: max 거리(m) 안에 닿고, 덜 돌아가고, 되도록 멀리 간 곳
+  function pickRestStop(cands, used, prev, next, L, max, profiles) {
+    const direct = haversine(prev.lat, prev.lng, next.lat, next.lng);
+    // 1) 직선거리로 먼저 거른다: max 안 · 너무 가깝지 않음 · 덜 돌아감
+    const pre = cands.filter((e) => !used.has(e)).map((e) => {
+      const da = haversine(prev.lat, prev.lng, e.item.lat, e.item.lng);
+      const db = haversine(e.item.lat, e.item.lng, next.lat, next.lng);
+      return { e: e, da: da, extra: da + db - direct };
+    }).filter((c) => c.da <= max && c.da >= max * 0.3 && c.extra <= REST_MAX_DETOUR_M)
+      .sort((x, y) => x.extra - y.extra).slice(0, 10);
+    // 2) 걷는 길로 다시 잰다
+    let best = null;
+    pre.forEach((c) => {
+      const a = legMeters(prev, c.e.item, profiles);
+      const b = legMeters(c.e.item, next, profiles);
+      const extra = a + b - L;
+      if (a > max || extra > REST_MAX_DETOUR_M) return;
+      const score = a - extra * 2;               // 멀리 갈수록 좋고, 돌아갈수록 나쁘다
+      if (!best || score > best.score) best = { e: c.e, extra: Math.max(0, extra), score: score };
+    });
+    return best;
+  }
+
+  // path(들를 곳 순서) 안에서, 쉴 곳 없이 S.restEveryMin분보다 오래 걷는 구간마다 쉬어 갈 곳을 하나씩 끼워 넣는다.
+  // 앞에서부터 차례로 보며, '정한 시간 안에 닿고 · 덜 돌아가고 · 되도록 멀리 간' 곳을 고른다. 결과 안내는 notes에 담는다.
+  function insertRestStops(path, profiles, speed, now, notes) {
+    if (!restOn(profiles) || !path.length || !S.origin) return;
+    const limit = S.restEveryMin * speed;           // 쉬지 않고 걸을 거리(m)
+    const used = new Set(path.map((x) => x.e));
+    const cands = restBreakCands(now);
+    let added = 0;
+    let extraTotal = 0;
+    let prev = S.origin;
+    let i = 0;
+    while (i < path.length) {
+      const next = path[i].e.item;
+      const L = legMeters(prev, next, profiles);
+      if (L <= limit) { prev = next; i++; continue; }
+      let best = null;
+      if (added < REST_MAX_STOPS) {
+        best = pickRestStop(cands, used, prev, next, L, limit, profiles);
+        if (!best) best = pickRestStop(cands, used, prev, next, L, limit * REST_STRETCH, profiles);   // 넓혀서 한 번 더
+        // 그래도 없고 아주 긴 구간이면, 조금 멀더라도 중간쯤 쉴 곳을 넣어 구간을 나눈다
+        if (!best && L > limit * 1.5) best = pickRestStop(cands, used, prev, next, L, Math.min(L * 0.7, limit * 3), profiles);
+      }
+      if (!best) { prev = next; i++; continue; }
+      path.splice(i, 0, { e: best.e, need: 'rest-break', label: restLabel(best.e) });
+      used.add(best.e);
+      added++;
+      extraTotal += best.extra;
+      prev = best.e.item;
+      i++;   // 다음 차례에 '방금 넣은 곳 → 원래 다음 곳' 구간을 다시 본다
+    }
+    if (added) {
+      const extraMin = Math.round(extraTotal / speed);
+      notes.push('오래 걷지 않게 약 ' + S.restEveryMin + '분마다 쉬어 갈 곳 ' + added + '곳을 넣었어요' +
+        (extraMin >= 1 ? '(약 ' + extraMin + '분 더 걸려요).' : '(걷는 시간은 거의 같아요).'));
+      notes.push('쉬어 가는 곳은 화장실·쉼터·매점·자판기예요. 앉을 자리가 없을 수도 있어요.');
+    }
+    // 다 넣은 뒤에도 정한 시간보다 많이 긴 구간이 남았는지 확인한다
+    let longestLeft = 0;
+    let p0 = S.origin;
+    path.forEach((x) => {
+      const m = legMeters(p0, x.e.item, profiles);
+      if (m > limit * 1.25) longestLeft = Math.max(longestLeft, m);
+      p0 = x.e.item;
+    });
+    if (longestLeft > 0) {
+      notes.push('쉴 곳 없이 약 ' + Math.max(1, Math.round(longestLeft / speed)) + '분 걸어야 하는 구간이 있어요. 중간에 천천히 쉬어 가세요.');
+    }
+  }
+
   // 가고 싶은 곳까지 길안내: 목록에서 누른 곳, 없으면 1순위
   function computeGuidance(now) {
     const st = ensureAppState();
@@ -2000,9 +2389,12 @@ ${kindVars}
     }
     const path = [{ e: target, need: 'dest', label: label }];
     // AED는 급하게 가는 곳이라 날씨 경유지(음수대·쉼터)를 넣지 않는다 [팀원1 추가]
-    if (d !== 'aed') insertWeatherStop(path, wx, profiles);
-    else wx.notes = [];
-    return buildPlan(path, { profiles: profiles, speed: speed, missing: [], basis: basis, title: '길안내', dest: d, weather: wx });
+    const restNotes = [];
+    if (d !== 'aed') {
+      insertWeatherStop(path, wx, profiles);
+      insertRestStops(path, profiles, speed, now, restNotes);   // [새 기능 2] AED는 급하니 넣지 않는다
+    } else wx.notes = [];
+    return buildPlan(path, { profiles: profiles, speed: speed, missing: [], basis: basis, title: '길안내', dest: d, weather: wx, restNotes: restNotes });
   }
 
   // ───────────────────── 10-6. 응급 화면: 지금 위치 설명 + 가까운 AED [팀원1 추가] ─────────────────────
@@ -2163,6 +2555,7 @@ ${kindVars}
     if (!S.data || !S.origin) return;
     const st = ensureAppState();
     const now = new Date();
+    updateRestControl();   // [새 기능 2] 상황에 따라 '쉬어 가기' 버튼 보이기/숨기기
 
     // (1) 화장실 추천
     window.recommendations = computeRecommendations(S.data.toilets, S.origin, st.profiles, st.filters, now,
@@ -2351,7 +2744,28 @@ ${kindVars}
     const before = firstLayerId((l) => l.type === 'fill-extrusion' || l.type === 'symbol');
     S.map.addSource('op-walk', { type: 'geojson', data: emptyFC() });
     S.map.addSource('op-rec', { type: 'geojson', data: emptyFC() });
+    // 흡연구역 둘레(임산부·유아차를 골랐을 때만 보임) [새 기능 1]
+    S.map.addSource('op-smoke', { type: 'geojson', data: emptyFC() });
+    S.map.addLayer({ id: 'op-smoke-fill', type: 'fill', source: 'op-smoke', paint: { 'fill-color': '#6b7280', 'fill-opacity': 0.2 } }, before);
+    S.map.addLayer({ id: 'op-smoke-line', type: 'line', source: 'op-smoke',
+      paint: { 'line-color': '#6b7280', 'line-width': 1.5, 'line-opacity': 0.8, 'line-dasharray': [1, 1.5] } }, before);
     S.map.addLayer({ id: 'op-walk-fill', type: 'fill', source: 'op-walk', paint: { 'fill-color': '#0ea5e9', 'fill-opacity': 0.07 } }, before);
+    // 편의시설 공백 지도 [새 기능 4] (?report 일 때만 채워진다)
+    S.map.addSource('op-gap', { type: 'geojson', data: emptyFC() });
+    S.map.addLayer({ id: 'op-gap-line', type: 'line', source: 'op-gap', layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': ['match', ['get', 'gap'], 'far', GAP_COLORS.far, GAP_COLORS.warn], 'line-width': 4, 'line-opacity': 0.85 } }, before);
+    S.map.addSource('op-gap-pts', { type: 'geojson', data: emptyFC() });
+    S.map.addLayer({ id: 'op-gap-pts', type: 'circle', source: 'op-gap-pts',
+      paint: { 'circle-radius': 13, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-width': 3,
+        'circle-stroke-color': ['match', ['get', 'gap'], 'nostall', GAP_COLORS.nostall, GAP_COLORS.nohours] } });
+    // N분 안에 갈 수 있는 길 [새 기능 3]
+    S.map.addSource('op-reach', { type: 'geojson', data: emptyFC() });
+    S.map.addLayer({ id: 'op-reach-line', type: 'line', source: 'op-reach', layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: {
+        'line-color': ['match', ['get', 'band'], 0, REACH_COLORS[0], 1, REACH_COLORS[1], REACH_COLORS[2]],
+        'line-width': ['match', ['get', 'band'], 0, REACH_WIDTHS[0], 1, REACH_WIDTHS[1], REACH_WIDTHS[2]],
+        'line-opacity': 0.9,
+      } }, before);
     S.map.addLayer({ id: 'op-walk-line', type: 'line', source: 'op-walk',
       paint: { 'line-color': '#0ea5e9', 'line-width': 2, 'line-opacity': 0.7, 'line-dasharray': [2, 2] } }, before);
     S.map.addLayer({ id: 'op-rec-casing', type: 'line', source: 'op-rec', layout: { 'line-cap': 'round' },
@@ -2370,6 +2784,238 @@ ${kindVars}
         'line-gradient': ['interpolate', ['linear'], ['line-progress'], 0, '#60a5fa', 0.5, '#2f74e6', 1, ROUTE_COLOR] } }, before);
     S.overlayReady = true;
     applyMapTheme(isDarkTheme());
+  }
+
+  // ───── 편의시설 공백 지도: 계산 [새 기능 4] ─────
+  // 여러 출발점에서 동시에 시작하는 다익스트라: 점마다 '가장 가까운 출발점까지 실제 걷는 거리(m)'
+  function dijkstraMulti(sources, stepFactor) {
+    const W = S.walk;
+    const cost = new Float64Array(W.N).fill(Infinity);
+    const meters = new Float64Array(W.N).fill(Infinity);
+    const done = new Uint8Array(W.N);
+    const heap = makeHeap();
+    sources.forEach((src) => {
+      if (src.m < cost[src.i]) { cost[src.i] = src.m; meters[src.i] = src.m; heap.push(src.m, src.i); }
+    });
+    while (heap.size()) {
+      const u = heap.pop()[1];
+      if (done[u]) continue;
+      done[u] = 1;
+      for (let k = W.off[u]; k < W.off[u + 1]; k++) {
+        const v = W.to[k];
+        if (done[v]) continue;
+        const w = edgeCost(W, k, stepFactor, 1);
+        if (!isFinite(w)) continue;
+        const nd = cost[u] + w;
+        if (nd < cost[v]) { cost[v] = nd; meters[v] = meters[u] + W.len[k]; heap.push(nd, v); }
+      }
+    }
+    return meters;
+  }
+
+  // 걷는 길의 점마다 '공원 안'인지 한 번만 계산한다
+  function ensureInPark() {
+    const W = S.walk;
+    if (S.inPark || !W || !S.data) return S.inPark;
+    const pts = (S.data.toilets || []).concat(S.data.facilities || []).filter(validPoint)
+      .map((p) => ({ lat: Number(p.lat), lng: Number(p.lng) }));
+    const inPark = new Uint8Array(W.N);
+    const dLat = GAP_PARK_M / 111320;
+    for (let i = 0; i < W.N; i++) {
+      const la = W.lat[i], ln = W.lng[i];
+      for (let j = 0; j < pts.length; j++) {
+        if (Math.abs(pts[j].lat - la) > dLat || Math.abs(pts[j].lng - ln) > dLat * 1.3) continue;
+        if (haversine(la, ln, pts[j].lat, pts[j].lng) <= GAP_PARK_M) { inPark[i] = 1; break; }
+      }
+    }
+    S.inPark = inPark;
+    return inPark;
+  }
+
+  // 결과: { lines, points, stats } 또는 null(데이터 아직 없음)
+  function computeGap(kind) {
+    const W = S.walk;
+    if (!W || !S.data || !S.entries.length) return null;
+    const cfg = GAP_KINDS[kind];
+    const now = new Date();
+    const targets = kind === 'toilet'
+      ? S.entries.filter((e) => e.cat === 'toilet' && num(e.item.accessible_stalls) > 0)
+      : restBreakCands(now);
+    const sources = [];
+    targets.forEach((e) => {
+      const sp = snapNode({ lat: Number(e.item.lat), lng: Number(e.item.lng) });
+      if (sp && sp.m <= SNAP_MAX_M) sources.push({ i: sp.i, m: sp.m });
+    });
+    const meters = dijkstraMulti(sources, stepFactorOf(cfg.steps));
+    const inPark = ensureInPark();
+    const minOf = (i) => meters[i] / cfg.speed;   // Infinity = 계단 없이 갈 수 없음
+    const warn = [], far = [];
+    let totalM = 0, warnM = 0, farM = 0;
+    let worst = { i: -1, min: -1 };
+    for (let u = 0; u < W.N; u++) {
+      for (let k = W.off[u]; k < W.off[u + 1]; k++) {
+        const v = W.to[k];
+        if (v < u || !inPark[u] || !inPark[v]) continue;
+        const m = Math.max(minOf(u), minOf(v));
+        totalM += W.len[k];
+        const seg = [ll(W.lat[u], W.lng[u]), ll(W.lat[v], W.lng[v])];
+        if (m > GAP_FAR_MIN) { far.push(seg); farM += W.len[k]; } else if (m > GAP_WARN_MIN) { warn.push(seg); warnM += W.len[k]; }
+      }
+      if (inPark[u] && isFinite(minOf(u)) && minOf(u) > worst.min) worst = { i: u, min: minOf(u) };
+    }
+    const lines = {
+      type: 'FeatureCollection',
+      features: [
+        { type: 'Feature', properties: { gap: 'warn' }, geometry: { type: 'MultiLineString', coordinates: warn } },
+        { type: 'Feature', properties: { gap: 'far' }, geometry: { type: 'MultiLineString', coordinates: far } },
+      ],
+    };
+    // 정보가 빠진 화장실
+    const toilets = (S.data.toilets || []).filter(validPoint);
+    const noStall = toilets.filter((t) => num(t.total) === null);
+    const noHours = toilets.filter((t) => num(t.total) !== null && String(t.open || '') !== '정시');
+    const points = {
+      type: 'FeatureCollection',
+      features: noStall.map((t) => ({ t: t, g: 'nostall' })).concat(noHours.map((t) => ({ t: t, g: 'nohours' })))
+        .map((x) => ({ type: 'Feature', properties: { gap: x.g, name: x.t.name || '' },
+          geometry: { type: 'Point', coordinates: ll(Number(x.t.lat), Number(x.t.lng)) } })),
+    };
+    const hoursUnclear = toilets.filter((t) => String(t.open || '') !== '정시').length;
+    return {
+      lines: lines, points: points,
+      stats: {
+        kind: kind, cfg: cfg, targets: sources.length,
+        farPct: totalM ? Math.round((farM / totalM) * 100) : 0,
+        warnPct: totalM ? Math.round((warnM / totalM) * 100) : 0,
+        worstMin: worst.i >= 0 ? Math.round(worst.min) : null,
+        worstPlace: worst.i >= 0 ? describeLocation(W.lat[worst.i], W.lng[worst.i]).text : '',
+        toilets: toilets.length, noStall: noStall.length, hoursUnclear: hoursUnclear,
+      },
+    };
+  }
+
+  function gapSummaryHtml(r) {
+    if (!r) return '<p>걷는 길 데이터를 불러오는 중이에요.</p>';
+    const st = r.stats;
+    const dot = (c) => '<i style="background:' + c + '"></i>';
+    const bar = (c) => '<i class="bar" style="border-top-color:' + c + '"></i>';
+    return '<ul>' +
+      '<li>' + bar(GAP_COLORS.far) + '공원 안 걷는 길의 <b>' + st.farPct + '%</b>는 가장 가까운 ' + esc(st.cfg.label) + '까지 ' + GAP_FAR_MIN + '분 넘게 걸려요.</li>' +
+      '<li>' + bar(GAP_COLORS.warn) + '<b>' + st.warnPct + '%</b>는 ' + GAP_WARN_MIN + '~' + GAP_FAR_MIN + '분 걸려요.</li>' +
+      (st.worstMin !== null ? '<li>가장 먼 곳: ' + esc(st.worstPlace) + ' (약 ' + st.worstMin + '분)</li>' : '') +
+      '</ul>' +
+      '<p class="op-gap-sub">데이터에서 빠진 정보</p><ul>' +
+      '<li>' + dot(GAP_COLORS.nostall) + '칸 수 정보가 없는 화장실 <b>' + st.noStall + '곳</b> (전체 ' + st.toilets + '곳 중)</li>' +
+      '<li>' + dot(GAP_COLORS.nohours) + '운영시간이 분명하지 않은 화장실 <b>' + st.hoursUnclear + '곳</b></li>' +
+      '<li>KSPO 편의시설 정보는 2021년에 한 번 수집된 데이터예요.</li>' +
+      '</ul>' +
+      '<p class="op-gap-note">' + esc(st.cfg.who) + ' 기준, 출발점 ' + st.targets + '곳. ' +
+      '공개 데이터 기준으로 멀다는 뜻이고, 데이터에 없는 시설이 실제로 있을 수 있어요.</p>';
+  }
+
+  function updateGap() {
+    if (!REPORT_MODE || !S.map || !S.map.getSource('op-gap')) return;
+    const key = S.gapKind + '|' + (S.walk ? 1 : 0) + '|' + S.entries.length;
+    if (key === S.gapKey) return;
+    const r = computeGap(S.gapKind);
+    if (r) S.gapKey = key;
+    S.map.getSource('op-gap').setData(r ? r.lines : emptyFC());
+    S.map.getSource('op-gap-pts').setData(r ? r.points : emptyFC());
+    if (S.gapEl) {
+      S.gapEl.querySelector('.op-gap-body').innerHTML = gapSummaryHtml(r);
+      S.gapEl.querySelectorAll('.op-gap-tabs button').forEach((b) => {
+        const on = b.dataset.kind === S.gapKind;
+        b.classList.toggle('is-on', on);
+        b.setAttribute('aria-pressed', String(on));
+      });
+    }
+  }
+
+  // ───── N분 안에 갈 수 있는 곳: 계산 [새 기능 3] ─────
+  // 결과: { fc: 지도에 그릴 선(분 단위로 묶음), counts: [{min, toilet, rest, aed}], note } 또는 null(걷는 길 없음)
+  function computeReach(profiles) {
+    const W = S.walk;
+    if (!W || !S.origin) return null;
+    ensureSmoke();
+    const so = snapNode(S.origin);
+    if (!so || so.m > SNAP_MAX_M) return { fc: emptyFC(), counts: [], note: '기준 위치가 걷는 길에서 너무 멀어요. 공원 안으로 옮겨 보세요.' };
+    const mode = stepsMode(profiles);
+    const smokeF = smokeAvoid(profiles) && W.smokeCount ? SMOKE_FACTOR : 1;
+    const meters = dijkstra(so.i, stepFactorOf(mode), smokeF);   // 휠체어·유아차는 계단 없는 길만
+    const speed = walkSpeed(profiles);
+    const maxMin = REACH_MINUTES[REACH_MINUTES.length - 1];
+    const bandOf = (min) => REACH_MINUTES.findIndex((m) => min <= m);   // -1이면 범위 밖
+    const minOf = (i) => (so.m + meters[i]) / speed;
+    // 1) 길 선을 분 단위로 묶는다 (한 선은 '먼 쪽 끝'에 닿는 시간으로 본다)
+    const lines = REACH_MINUTES.map(() => []);
+    for (let u = 0; u < W.N; u++) {
+      if (!isFinite(meters[u])) continue;
+      for (let k = W.off[u]; k < W.off[u + 1]; k++) {
+        const v = W.to[k];
+        if (v < u || !isFinite(meters[v])) continue;          // 같은 선을 두 번 그리지 않게
+        const band = bandOf(Math.max(minOf(u), minOf(v)));
+        if (band < 0) continue;
+        if (mode === 'avoid' && W.step[k]) continue;          // 계단은 칠하지 않는다
+        lines[band].push([ll(W.lat[u], W.lng[u]), ll(W.lat[v], W.lng[v])]);
+      }
+    }
+    const fc = {
+      type: 'FeatureCollection',
+      features: lines.map((coords, i) => ({
+        type: 'Feature', properties: { band: i },
+        geometry: { type: 'MultiLineString', coordinates: coords },
+      })).reverse(),   // 먼 범위를 먼저 그려서 가까운 범위가 위에 보이게
+    };
+    // 2) 범위 안 시설 수
+    const now = new Date();
+    const wheel = (profiles || []).includes('wheelchair');
+    const kindOf = (e) => {
+      if (e.cat === 'toilet') return (!wheel || num(e.item.accessible_stalls) > 0) ? 'toilet' : null;
+      if ((e.cat === 'heat' || e.cat === 'cold') && !membersOnly(e) && shelterStatus(e, now) !== false) return 'rest';
+      if (e.cat === 'facility' && REST_STOP_RE.test(facTypeOf(e))) return 'rest';
+      if (e.cat === 'aed') return 'aed';
+      return null;
+    };
+    const counts = REACH_MINUTES.map((m) => ({ min: m, toilet: 0, rest: 0, aed: 0 }));
+    S.entries.forEach((e) => {
+      const kind = kindOf(e);
+      if (!kind) return;
+      const sp = snapNode({ lat: Number(e.item.lat), lng: Number(e.item.lng) });
+      if (!sp || sp.m > SNAP_MAX_M || !isFinite(meters[sp.i])) return;
+      const min = (so.m + meters[sp.i] + sp.m) / speed;
+      if (min > maxMin) return;
+      counts.forEach((c) => { if (min <= c.min) c[kind]++; });
+    });
+    const note = '분당 ' + speed + 'm 가정' + (mode === 'avoid' ? ' · 계단 없는 길만' : '') +
+      (smokeF !== 1 ? ' · 흡연구역 피함' : '') + ' · 경사·공사 미반영';
+    return { fc: fc, counts: counts, note: note, wheel: wheel };
+  }
+
+  // 요약 칸 글자
+  function reachSummaryHtml(r) {
+    if (!r) return '<p>걷는 길 데이터를 불러오는 중이에요.</p>';
+    if (!r.counts.length) return '<p>' + esc(r.note) + '</p>';
+    const rows = r.counts.map((c, i) =>
+      '<li><i style="border-top-color:' + REACH_COLORS[i] + '"></i><b>' + c.min + '분</b> ' +
+      (r.wheel ? '장애인 칸 화장실 ' : '화장실 ') + c.toilet + ' · 쉴 곳 ' + c.rest + ' · AED ' + c.aed + '</li>').join('');
+    return '<ul>' + rows + '</ul><p>' + esc(r.note) + '</p>';
+  }
+
+  function updateReach(profiles) {
+    if (!S.map.getSource('op-reach')) return;
+    const sum = S.reachEl && S.reachEl.querySelector('.op-reach-sum');
+    if (!S.reachOn) {
+      S.map.getSource('op-reach').setData(emptyFC());
+      if (sum) sum.hidden = true;
+      S.reachKey = '';
+      return;
+    }
+    const key = S.origin.lat + ',' + S.origin.lng + '|' + (profiles || []).slice().sort().join(',') + '|' + (S.walk ? 1 : 0);
+    if (key === S.reachKey) return;
+    S.reachKey = key;
+    const r = computeReach(profiles);
+    S.map.getSource('op-reach').setData(r ? r.fc : emptyFC());
+    if (sum) { sum.innerHTML = reachSummaryHtml(r); sum.hidden = false; }
   }
 
   function updateOverlays() {
@@ -2394,10 +3040,22 @@ ${kindVars}
     });
     if (!S.overlayReady || !S.origin) return;
     const st = ensureAppState();
-    S.map.getSource('op-walk').setData({
+    // 'N분 범위'를 켜면 직선 원 대신 실제 걷는 길 범위를 보여 준다 [새 기능 3]
+    S.map.getSource('op-walk').setData(S.reachOn ? emptyFC() : {
       type: 'FeatureCollection',
       features: [circlePolygon(S.origin.lat, S.origin.lng, WALK_RING_MIN * walkSpeed(st.profiles), 72)],
     });
+    updateReach(st.profiles);
+    updateGap();   // [새 기능 4] ?report 일 때만 동작
+    // 흡연구역 둘레 [새 기능 1]
+    const smokeSrc = S.map.getSource('op-smoke');
+    if (smokeSrc) {
+      smokeSrc.setData({
+        type: 'FeatureCollection',
+        features: smokeAvoid(st.profiles)
+          ? smokePoints().map((f) => circlePolygon(Number(f.lat), Number(f.lng), SMOKE_RADIUS_M, 36)) : [],
+      });
+    }
     const plan = window.routePlan;
     const hasRoute = !!(plan && plan.stops && plan.stops.length);
     // 걷는 길 그래프가 있으면 길을 따라 그린 선(plan.geometry), 없으면 들를 곳을 잇는 직선

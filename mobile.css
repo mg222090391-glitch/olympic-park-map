@@ -1,0 +1,530 @@
+/* =====================================================================
+   mobile.css — 휴대폰 앱 화면 배치
+   ---------------------------------------------------------------------
+   - style.css 뒤에 불러와서 '배치'만 바꾼다. 색·글자·버튼 모양은 style.css(공공서비스형)를 그대로 쓴다.
+   - 화면 구조:  [맨 위 KSPO 로고 줄] [응급 버튼] [화면 하나(안에서 스크롤)] [아래 탭 5개]
+   - 화면 바꾸기는 nav.js가 .screen 에 is-active 를 붙여서 한다.
+   - 컴퓨터에서 열면 가운데에 휴대폰 너비(최대 480px)로 보인다.
+   - JS가 쓰는 id·class·data-role 이름은 하나도 바꾸지 않았다.
+   ===================================================================== */
+
+:root {
+  --app-max: 480px;
+  --appbar-h: 60px;
+  --tabbar-h: 62px;
+  --kspo-navy: #0b2a55;
+  --em-red: #c8191f;
+  --ic-home: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 11l9-7 9 7'/%3E%3Cpath d='M5 10v10h5v-6h4v6h5V10'/%3E%3C/svg%3E");
+  --ic-info: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 11v6M12 7.5h.01'/%3E%3C/svg%3E");
+}
+
+/* ---------- 1. 화면 뼈대: 한 화면 높이 고정, 안쪽만 스크롤 ---------- */
+html:has(body.app) {
+  height: 100%;
+  background: #dfe3e8;
+  scroll-behavior: auto;
+}
+html[data-theme="dark"]:has(body.app) { background: #07090c; }
+
+body.app {
+  height: 100vh;
+  height: 100dvh;
+  max-width: var(--app-max);
+  margin: 0 auto;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--c-bg);
+}
+@media (min-width: 520px) {
+  body.app {
+    border-left: 1px solid var(--c-border);
+    border-right: 1px solid var(--c-border);
+    box-shadow: 0 0 40px rgba(11, 42, 85, 0.10);
+  }
+}
+
+/* ---------- 2. 맨 위: KSPO 로고 줄 ---------- */
+body.app .app-bar {
+  flex: none;
+  position: relative;
+  overflow: visible;
+  padding: calc(env(safe-area-inset-top, 0px) + 8px) 12px 8px 14px;
+  background: var(--c-surface);
+  color: var(--c-text);
+  border-bottom: 1px solid var(--c-border);
+}
+body.app .app-bar::after { display: none; }
+.app-bar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 44px;
+}
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.kspo-logo {
+  display: block;
+  height: 30px;
+  width: auto;
+  max-width: 120px;
+  object-fit: contain;
+}
+html[data-theme="dark"] .kspo-logo {
+  /* 어두운 화면에서 로고가 묻히지 않게 흰 바탕 칸에 올린다 */
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: #fff;
+}
+.kspo-text {
+  font-size: 1.125rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: var(--kspo-navy);
+}
+html[data-theme="dark"] .kspo-text { color: var(--c-navy); }
+.app-divider {
+  flex: none;
+  width: 1px;
+  height: 26px;
+  background: var(--c-border-strong);
+}
+body.app .site-title {
+  font-size: 0.9375rem;
+  font-weight: 800;
+  line-height: 1.22;
+  letter-spacing: -0.03em;
+  color: var(--c-navy);
+}
+
+/* 작은 버튼 3개: 아이콘만 보이고, 글자는 화면 읽기 프로그램용으로 남긴다 */
+body.app .header-actions {
+  position: static;
+  flex: none;
+  display: flex;
+  gap: 4px;
+}
+body.app .header-actions > button {
+  min-width: 40px;
+  min-height: 40px;
+  width: 40px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+}
+body.app .header-actions .theme-text {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+body.app .size-icon { font-size: 1rem; font-weight: 800; line-height: 1; }
+
+/* ---------- 3. 응급 버튼: 늘 로고 줄 바로 아래 ---------- */
+body.app .emergency-bar {
+  flex: none;
+  position: relative;
+  top: auto;
+  padding: 8px 12px;
+  background: var(--c-surface);
+  box-shadow: 0 1px 0 var(--c-border);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+body.app .emergency-btn {
+  width: 100%;
+  min-height: 54px;
+  padding: 0 14px;
+  justify-content: flex-start;
+  gap: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--em-red);
+  color: #fff;
+  font-size: 1.0625rem;
+  font-weight: 800;
+}
+body.app .em-btn-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+  text-align: left;
+}
+body.app .em-btn-sub {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  opacity: 0.92;
+}
+
+/* ---------- 4. 화면들: 겹쳐 두고 하나만 보이게 ---------- */
+.app-main {
+  flex: 1 1 auto;
+  position: relative;
+  min-height: 0;
+  outline: none;
+}
+.screen {
+  position: absolute;
+  inset: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 14px 12px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+/* 안 보이는 화면: 크기는 그대로 두고 숨긴다(지도가 크기를 잃지 않게) */
+.screen:not(.is-active),
+.screen:not(.is-active) * {
+  visibility: hidden !important;   /* 지도 글자·마커처럼 스스로 visible을 켜는 것도 숨긴다 */
+  pointer-events: none !important;
+}
+.screen.is-active { z-index: 1; }
+.screen > * { flex: none; }
+
+/* 화면이 바뀔 때 한 번만 살짝 나타나기 (사용자가 누른 것에 대한 반응) */
+@media (prefers-reduced-motion: no-preference) {
+  .screen.is-entering { animation: screen-in 0.18s ease-out; }
+  @keyframes screen-in {
+    from { opacity: 0.4; transform: translateY(6px); }
+    to   { opacity: 1;   transform: none; }
+  }
+}
+
+/* style.css의 큰 화면 배치(옆 칸·따라오는 지도)를 끈다 */
+body.app .card { padding: 16px 14px; }
+body.app .map-card { position: static !important; top: auto !important; }
+
+/* ---------- 5. 홈 ---------- */
+.home-menu {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.home-tile {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  row-gap: 2px;
+  align-items: center;
+  min-height: 84px;
+  padding: 12px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.home-tile:active { background: var(--c-primary-soft); border-color: var(--c-primary); }
+@media (hover: hover) {
+  .home-tile:hover { border-color: var(--c-primary); }
+}
+.tile-icon {
+  grid-row: 1 / 3;
+  display: grid;
+  place-items: center;
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  background: var(--c-primary-soft);
+  color: var(--c-primary);
+}
+.tile-icon::before {
+  content: "";
+  width: 22px; height: 22px;
+  background-color: currentColor;
+  -webkit-mask: var(--ic) center / contain no-repeat;
+  mask: var(--ic) center / contain no-repeat;
+}
+.tile-name {
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: var(--c-navy);
+}
+.tile-desc {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--c-muted);
+}
+/* 첫 두 칸(가장 먼저 할 일)은 남색으로 눈에 띄게 */
+.tile-situation, .tile-dest {
+  background: var(--kspo-navy);
+  border-color: var(--kspo-navy);
+  color: #fff;
+}
+.tile-situation .tile-name, .tile-dest .tile-name { color: #fff; }
+.tile-situation .tile-desc, .tile-dest .tile-desc { color: rgba(255, 255, 255, 0.82); }
+.tile-situation .tile-icon, .tile-dest .tile-icon { background: rgba(255, 255, 255, 0.14); color: #fff; }
+.tile-situation:active, .tile-dest:active { background: #123a72; border-color: #123a72; }
+html[data-theme="dark"] .tile-situation, html[data-theme="dark"] .tile-dest { background: #1b3866; border-color: #2a4d84; }
+
+.tile-situation { --ic: var(--ic-person); }
+.tile-dest      { --ic: var(--ic-pin); }
+.tile-map       { --ic: var(--ic-all); }
+.tile-route     { --ic: var(--ic-compass); }
+.tile-parking   { --ic: var(--ic-parking); }
+.tile-info      { --ic: var(--ic-info); }
+
+/* 이렇게 써요 (1→2→3 순서라 번호를 붙인다) */
+body.app .how-to {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px dashed var(--c-border-strong);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+}
+body.app .how-to li { color: var(--c-muted); background: none; box-shadow: none; padding: 0; }
+body.app .how-to b { color: var(--c-text); }
+
+/* ---------- 6. 내 상황 화면 ---------- */
+body.app #profile-select .card-title,
+body.app #dest-select .card-title { margin-bottom: 12px; }
+body.app .dest-options { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+body.app .dest-btn { min-height: 76px; padding: 8px 4px; font-size: 0.8125rem; }
+body.app .dest-btn.dest-wide { grid-column: 1 / -1; min-height: 52px; }
+
+/* 아래에 붙는 '다음으로' 버튼 줄 */
+.screen:has(.screen-actions) { padding-bottom: 0; }
+.screen-actions {
+  position: sticky;
+  bottom: 0;
+  margin: 4px -12px 0;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 8px;
+  background: var(--c-surface);
+  border-top: 1px solid var(--c-border);
+  z-index: 2;
+}
+.screen-actions .btn { min-height: 50px; padding: 0 10px; }
+
+/* ---------- 7. 지도 화면: 지도가 화면을 꽉 채운다 ---------- */
+.screen-map { padding: 0; gap: 0; overflow: hidden; }
+body.app .screen-map .map-card {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--c-surface);
+}
+.map-toolbar {
+  flex: none;
+  position: relative;
+  z-index: 30;              /* 펼친 판이 지도 위에 오게 */
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-surface);
+}
+body.app .map-toolbar .origin-bar {
+  flex: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  gap: 0;
+}
+body.app .map-toolbar .origin-title { display: none; }
+body.app .map-toolbar .origin-gps { min-height: 42px; padding: 0 12px; font-size: 0.875rem; white-space: nowrap; }
+.map-tools {
+  flex: 1 1 auto;
+  min-width: 0;
+  position: relative;
+}
+.map-tools > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface);
+  font-size: 0.875rem;
+  font-weight: 700;
+  list-style: none;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.map-tools > summary::-webkit-details-marker { display: none; }
+.map-tools > summary::after { content: "▾"; flex: none; color: var(--c-muted); }
+.map-tools[open] > summary { border-color: var(--c-primary); color: var(--c-primary-strong); }
+.map-tools[open] > summary::after { content: "▴"; }
+/* 펼치면 지도 위에 덮이는 판 */
+.map-tools-body {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: calc(var(--app-max) - 24px);
+  max-width: calc(100vw - 20px);
+  max-height: 62dvh;
+  overflow-y: auto;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-surface);
+  box-shadow: 0 12px 32px rgba(11, 42, 85, 0.18);
+}
+body.app .map-tools-body #filter-bar { flex-wrap: wrap; overflow: visible; margin: 0; padding: 0; }
+body.app .map-tools-body .filter-btn { min-height: 40px; }
+body.app .map-tools-body .origin-options { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+body.app .map-tools-body .hint { margin-top: 0; }
+body.app .origin-now {
+  flex: none;
+  margin: 0;
+  padding: 6px 12px;
+  font-size: 0.8125rem;
+  color: var(--c-muted);
+  background: var(--c-surface-2);
+  border-bottom: 1px solid var(--c-border);
+}
+body.app #map {
+  flex: 1 1 auto;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  border-radius: 0 !important;
+  border: 0;
+}
+.map-to-route {
+  position: absolute;
+  left: 12px;
+  bottom: 14px;             /* 오른쪽 아래 지도 저작권 표시·축척을 가리지 않게 왼쪽에 둔다 */
+  z-index: 5;
+  min-height: 46px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--kspo-navy);
+  color: #fff;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 800;
+  box-shadow: 0 6px 18px rgba(11, 42, 85, 0.28);
+  cursor: pointer;
+}
+html[data-theme="dark"] .map-to-route { background: var(--c-primary); color: #0b1220; }
+body.app .screen-map .map-card { position: relative !important; }
+
+/* ---------- 8. 길안내 · 주차 · 이용 안내 화면 ---------- */
+body.app .rec-card { padding: 16px 14px; }
+body.app .chart-box { height: 260px; }
+body.app .info-card {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin: 0;
+  padding: 16px 14px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-surface);
+  font-size: 0.875rem;
+}
+body.app .info-card h2 { font-size: 1rem; margin-bottom: 6px; color: var(--c-navy); }
+body.app .info-card ul { padding-left: 1.1em; display: grid; gap: 4px; }
+
+/* ---------- 9. 아래 탭 ---------- */
+.tabbar {
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  height: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: var(--c-surface);
+  border-top: 1px solid var(--c-border);
+  z-index: 10;
+}
+.tab {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: 0;
+  background: none;
+  color: var(--c-muted);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.tab-icon {
+  width: 24px; height: 24px;
+  background-color: currentColor;
+  -webkit-mask: var(--ic) center / contain no-repeat;
+  mask: var(--ic) center / contain no-repeat;
+}
+.tab-home      { --ic: var(--ic-home); }
+.tab-situation { --ic: var(--ic-person); }
+.tab-map       { --ic: var(--ic-all); }
+.tab-route     { --ic: var(--ic-compass); }
+.tab-parking   { --ic: var(--ic-parking); }
+.tab[aria-current="page"] { color: var(--c-primary); }
+/* 지금 화면 표시: 색만으로 구분하지 않게 위쪽에 막대도 */
+.tab[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 26%; right: 26%;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--c-primary);
+}
+.tab:active { background: var(--c-primary-soft); }
+/* 길안내가 만들어지면 점으로 알려 준다 */
+.tab-dot {
+  position: absolute;
+  top: 9px;
+  right: calc(50% - 18px);
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--em-red);
+  box-shadow: 0 0 0 2px var(--c-surface);
+}
+
+/* 옛 바로가기 막대는 쓰지 않는다 */
+body.app .bottom-nav { display: none; }
+
+/* ---------- 10. 큰 글씨 ---------- */
+html[data-size="large"] body.app .tile-name { font-size: 1.125rem; }
+html[data-size="large"] body.app .tile-desc { font-size: 0.875rem; }
+html[data-size="large"] body.app .tab { font-size: 0.8125rem; }
+html[data-size="large"] body.app .home-menu { grid-template-columns: 1fr; }
+
+/* ---------- 11. 아주 좁은 휴대폰(가로 340px 이하) ---------- */
+@media (max-width: 340px) {
+  body.app .site-title { font-size: 0.8125rem; }
+  .kspo-logo { height: 24px; }
+  .home-tile { grid-template-columns: 1fr; min-height: 96px; }
+  .tile-icon { grid-row: auto; width: 34px; height: 34px; }
+  body.app .dest-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

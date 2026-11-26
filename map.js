@@ -22,6 +22,9 @@
  *      <div class="pop"> pop-type(종류) / pop-title(이름) / pop-badge is-open|is-closed|is-unknown|is-heat|is-cold
  *                        / pop-row(정보 줄, <b>항목</b> 값) / pop-note(칸 수 정보 없음 같은 주의 문구)
  *  - recommendations 항목에는 약속된 6개 값에 더해 stallsType('total'|'female'|'accessible')을 넣는다.
+ *      [추가] walkM(걷는 거리 m), pathBased(true: 걷는 길 기준 / false: 길을 못 찾아 직선거리로 대신)도 넣는다.
+ *  - 응급 화면(추가): 'emergencyopen'을 들으면 window.emergencyInfo(지금 위치 설명·가까운 AED)를 채우고
+ *      'emergencyready'를 보낸다. 'emergencyroute' { lat, lng }를 들으면 그 AED까지 길안내를 만든다.
  *
  * index.html에 필요한 것 (Leaflet 대신):
  *   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.1/dist/maplibre-gl.css">
@@ -69,6 +72,22 @@
     concert: ['toilet', 'shop'],
   };
   const WALK_RING_MIN = 5;                     // 기준 위치 둘레에 그릴 '도보 N분' 원
+  // 현장 제보용 구글 폼 주소. 비어 있으면 팝업의 '정보가 달라요' 버튼을 숨긴다 [팀원1 추가]
+  const REPORT_FORM_URL = '';
+  // 응급 화면에 보여 줄 가까운 AED 수 [팀원1 추가]
+  const EMERGENCY_AED_COUNT = 3;
+  // 위치가 의심스러운 AED는 응급 화면의 '가까운 AED'에서 빼고, AED 목록에서는 뒤로 보낸다 [팀원1 추가]
+  //  1) 서로 다른 건물 여러 곳(만남의광장·평화의광장·올림픽홀·수영장 등)이 같은 좌표로 들어 있는 곳
+  const AED_UNSURE_COORDS = ['37.520339698,127.1155178766'];
+  //  2) 설치 위치 설명에 적힌 경기장과 좌표가 이만큼 넘게 떨어진 곳 (예: '체조경기장 지하1층'인데 좌표는 900m 떨어짐)
+  const AED_PLACE_MISMATCH_M = 400;
+  const AED_PLACE_CHECK = [   // [설명에 나오는 이름, 그 장소 좌표] — 좌표는 아래 EMERGENCY_LANDMARKS와 같은 값
+    [/체조경기장|KSPO\s*돔|KSPO\s*DOME/i, 37.51932, 127.127041], [/핸드볼/, 37.517703, 127.126494],
+    [/테니스/, 37.514955, 127.128647], [/수영장|수영경기장/, 37.520654, 127.126685],
+    [/우리금융아트홀|역도경기장/, 37.517467, 127.125023], [/올림픽홀/, 37.515154, 127.127099],
+    [/벨로드롬/, 37.517498, 127.123861], [/소마미술관/, 37.516819, 127.118666],
+    [/한성백제박물관/, 37.515572, 127.120615], [/평화의\s*광장/, 37.518447, 127.116531], [/만남의\s*광장/, 37.516885, 127.129675],
+  ];
   const KOREAN_FONTS = "'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', sans-serif";
 
   // 종류별 색(팀원3 style.css의 --mk-종류 변수가 있으면 그 색을 쓰고, 없을 때만 아래 색) · 팝업 머리 기호
@@ -155,7 +174,9 @@
   }
 
   // 화장실 추천: 점수 = 칸 수 ÷ (도보 시간(분) + 1), 상위 3곳
-  function computeRecommendations(toilets, origin, profiles, filters, now) {
+  // distOf(화장실) → { m: 거리(m), path: 걷는 길 기준이면 true }. 없으면 직선거리로 잰다.
+  // [팀원1 수정] 길안내와 같은 숫자가 나오도록 recompute()에서 '걷는 길 거리'를 넘겨준다.
+  function computeRecommendations(toilets, origin, profiles, filters, now, distOf) {
     profiles = profiles || [];
     filters = filters || {};
     now = now || new Date();
@@ -168,12 +189,15 @@
       if (filters.openNow && toiletOpenNow(t, now) !== true) return;       // 열림이 확실한 곳만
       const stalls = stallsFor(t, profiles, filters);
       if (!stalls || stalls <= 0) return;                                  // 휠체어 칸 0이면 제외 등
-      const meters = haversine(origin.lat, origin.lng, t.lat, t.lng);
+      const dist = distOf ? distOf(t) : { m: haversine(origin.lat, origin.lng, t.lat, t.lng), path: false };
+      const meters = dist.m;
       const minutes = walkMinutes(meters, profiles);
       list.push({
         name: t.name,
         rawScore: stalls / (minutes + 1),
         walkMin: Math.max(1, Math.round(minutes)),
+        walkM: Math.round(meters),
+        pathBased: !!dist.path,
         stalls: stalls,
         lat: t.lat,
         lng: t.lng,
@@ -184,6 +208,7 @@
     return list.slice(0, MAX_RECOMMEND).map((r) => ({
       name: r.name, score: round2(r.rawScore), walkMin: r.walkMin, stalls: r.stalls, lat: r.lat, lng: r.lng,
       stallsType: type, // 'total'(칸) | 'female'(여성 칸) | 'accessible'(장애인 칸) — 목록 표시용
+      walkM: r.walkM, pathBased: r.pathBased, // [팀원1 추가] 걷는 거리(m), 걷는 길 기준인지
     }));
   }
 
@@ -817,9 +842,10 @@ ${kindVars}
   function distanceText(item) {
     if (!S.origin) return null;
     const st = ensureAppState();
-    const m = haversine(S.origin.lat, S.origin.lng, item.lat, item.lng);
-    const min = Math.max(1, Math.round(walkMinutes(m, st.profiles)));
-    return '직선 약 ' + Math.round(m).toLocaleString() + 'm · 도보 약 ' + min + '분 (분당 ' + walkSpeed(st.profiles) + 'm 가정)';
+    const d = distFromOrigin(item, st.profiles);   // [팀원1 수정] 걷는 길 거리(길을 못 찾으면 직선)
+    const min = Math.max(1, Math.round(walkMinutes(d.m, st.profiles)));
+    return (d.path ? '걸어서 약 ' : '직선 약 ') + Math.round(d.m).toLocaleString() + 'm · 도보 약 ' + min + '분 (분당 ' + walkSpeed(st.profiles) + 'm 가정' +
+      (d.path ? ')' : ', 직선거리 기준)');
   }
 
   function parkDist(item) {
@@ -888,6 +914,7 @@ ${kindVars}
       case 'aed':
         h += headHtml('aed', '자동심장충격기(AED)', it.name || 'AED');
         h += rowsHtml([['설치기관', it.name], ['설치위치', it.detail], ['거리', distanceText(it)]]);
+        if (aedUnsure(it)) h += noteHtml('설치위치 설명과 지도 좌표가 맞지 않아 실제 위치와 다를 수 있어요. 설치위치 설명을 확인하세요.');
         break;
       case 'transit':
         if (entry.kind === 'subway') {
@@ -907,6 +934,10 @@ ${kindVars}
       default: // facility
         h += headHtml('facility', '편의시설 · ' + (it.type || '기타'), it.place || it.type);
         h += rowsHtml([['상세 위치', it.detail], ['비고', it.note], ['거리', distanceText(it)]]);
+    }
+    // 현장 제보: 폼 주소가 정해졌을 때만 버튼을 보여 준다 [팀원1 추가]
+    if (REPORT_FORM_URL) {
+      h += '<p class="pop-report"><a class="pop-report-btn" href="' + esc(REPORT_FORM_URL) + '" target="_blank" rel="noopener">정보가 달라요</a></p>';
     }
     return '<div class="pop pop-' + entry.cat + '">' + h + '</div>';
   }
@@ -1061,9 +1092,28 @@ ${kindVars}
     );
   }
 
+  // 공유 주소의 출발지: #wheelchair-toilet-from-peacegate 처럼 'from' 다음 낱말 (ui.js의 HASH_ORIGIN과 같은 이름)
+  const HASH_ORIGIN = {
+    olympicstation: 'olympic-stn', mongchonstation: 'mongchon-stn', hanseongstation: 'hanseong-stn',
+    peacegate: 'peace-gate', southparking: 's2-parking', northgate: 'n2-gate',
+  };
+  function originFromHash(hash) {
+    const t = String(hash || '').replace(/^#/, '').toLowerCase().split('-');
+    const i = t.indexOf('from');
+    return i > -1 && HASH_ORIGIN[t[i + 1]] ? HASH_ORIGIN[t[i + 1]] : null;
+  }
+
   function initLocation() {
+    // 공유 주소로 열었으면(#…-from-출발지) 그 출발지에서 시작하고 휴대폰 위치는 묻지 않는다
+    // (ui.js가 출발지가 바뀔 때 주소를 고쳐 쓰므로, 기본 출발지를 정하기 전에 먼저 읽어 둔다)
+    let want = null;
+    try { want = originFromHash(location.hash); } catch (e) { want = null; }
     const c = parkCenter();
     setOrigin(c.lat, c.lng, '공원 중심 (기본값)', 'center');
+    if (want && ORIGIN_PRESETS[want]) {
+      const p = presetPoint(want);
+      if (p) { setOrigin(p.lat, p.lng, p.label, want); return; }
+    }
     if (!('geolocation' in navigator)) {
       tempNotice('이 브라우저는 위치 기능이 없어 공원 중심을 기준으로 계산해요.');
       return;
@@ -1255,7 +1305,7 @@ ${kindVars}
     const pick = (kind, n) => {
       const seen = new Set();
       return S.entries.filter((e) => e.cat === 'transit' && e.kind === kind)
-        .map((e) => ({ e: e, m: haversine(o.lat, o.lng, e.item.lat, e.item.lng) }))
+        .map((e) => { const d = distFromOrigin(e.item, st.profiles); return { e: e, m: d.m, path: d.path }; })   // [팀원1 수정] 걷는 길 거리
         .sort((a, b) => a.m - b.m)
         .filter((r) => { const k = r.e.item.name; if (seen.has(k)) return false; seen.add(k); return true; })
         .slice(0, n);
@@ -1297,6 +1347,7 @@ ${kindVars}
         lat: r.e.item.lat,
         lng: r.e.item.lng,
         meters: Math.round(r.m),
+        pathBased: r.path,        // true: 걷는 길 기준, false: 직선거리 기준 [팀원1 추가]
         walkMin: Math.max(1, Math.round(walkMinutes(r.m, st.profiles))),
         status: null,
         facts: destFacts(r.e, new Date()),
@@ -1544,6 +1595,103 @@ ${kindVars}
     return { coords: coords, meters: sa.m + r.meters + sb.m, steps: r.steps };
   }
 
+  // ───── 10-4-1. 한 곳에서 여러 곳까지 걷는 거리 한꺼번에 재기 [팀원1 추가] ─────
+  // 추천 목록·가까운 곳 목록·팝업의 거리도 길안내와 같은 '걷는 길' 기준으로 맞추려고 쓴다.
+  // 시작점에서 길 위 모든 점까지 가장 짧은 거리를 한 번에 구하고(다익스트라), 시설마다 꺼내 쓴다.
+  // 계단 규칙은 walkLegRaw와 같다(휠체어·유아차는 계단 피함, 계단 없는 길이 없으면 계단 포함 길).
+  function makeHeap() {
+    const h = [];   // [값, 점 번호]
+    return {
+      size: () => h.length,
+      push(f, n) {
+        h.push([f, n]);
+        let i = h.length - 1;
+        while (i > 0) { const p = (i - 1) >> 1; if (h[p][0] <= h[i][0]) break; [h[p], h[i]] = [h[i], h[p]]; i = p; }
+      },
+      pop() {
+        const top = h[0];
+        const last = h.pop();
+        if (h.length) {
+          h[0] = last;
+          let i = 0;
+          for (;;) {
+            const l = 2 * i + 1, r = l + 1;
+            let m = i;
+            if (l < h.length && h[l][0] < h[m][0]) m = l;
+            if (r < h.length && h[r][0] < h[m][0]) m = r;
+            if (m === i) break;
+            [h[m], h[i]] = [h[i], h[m]]; i = m;
+          }
+        }
+        return top;
+      },
+    };
+  }
+
+  // 결과: 점마다 실제 걷는 거리(m). 길 고르기는 계단 가중치(stepFactor)를 넣어서 한다
+  function dijkstra(s, stepFactor) {
+    const W = S.walk;
+    const cost = new Float64Array(W.N).fill(Infinity);
+    const meters = new Float64Array(W.N).fill(Infinity);
+    const done = new Uint8Array(W.N);
+    const heap = makeHeap();
+    cost[s] = 0;
+    meters[s] = 0;
+    heap.push(0, s);
+    while (heap.size()) {
+      const u = heap.pop()[1];
+      if (done[u]) continue;
+      done[u] = 1;
+      for (let k = W.off[u]; k < W.off[u + 1]; k++) {
+        const v = W.to[k];
+        if (done[v]) continue;
+        const w = W.step[k] ? W.len[k] * stepFactor : W.len[k];
+        if (!isFinite(w)) continue;
+        const nd = cost[u] + w;
+        if (nd < cost[v]) { cost[v] = nd; meters[v] = meters[u] + W.len[k]; heap.push(nd, v); }
+      }
+    }
+    return meters;
+  }
+
+  // from에서 p까지 걷는 거리(m)를 돌려주는 함수. 길 데이터가 없거나 from이 길에서 너무 멀면 null
+  function walkDistFrom(from, profiles) {
+    if (!S.walk || !from) return null;
+    const W = S.walk;
+    const mode = stepsMode(profiles);
+    const key = from.lat + ',' + from.lng + '|' + mode;
+    if (!W.distCache) W.distCache = new Map();
+    if (W.distCache.has(key)) return W.distCache.get(key);
+    const so = snapNode(from);
+    let fn = null;
+    if (so && so.m <= SNAP_MAX_M) {
+      const main = dijkstra(so.i, mode === 'avoid' ? Infinity : mode === 'slow' ? STEP_SLOW_FACTOR : 1);
+      let backup = null;   // 계단 없이 못 가는 곳만 계단 포함 길로 다시 잰다(필요할 때 한 번만)
+      fn = (p) => {
+        const sp = snapNode({ lat: Number(p.lat), lng: Number(p.lng) });
+        if (!sp || sp.m > SNAP_MAX_M) return null;
+        let m = main[sp.i];
+        if (!isFinite(m) && mode === 'avoid') {
+          if (!backup) backup = dijkstra(so.i, STEP_SLOW_FACTOR);
+          m = backup[sp.i];
+        }
+        return isFinite(m) ? so.m + m + sp.m : null;
+      };
+    }
+    if (W.distCache.size > 12) W.distCache.clear();
+    W.distCache.set(key, fn);
+    return fn;
+  }
+
+  // 기준 위치(또는 from)에서 p까지: { m: 거리(m), path: true(걷는 길) | false(길을 못 찾아 직선거리) }
+  function distFromOrigin(p, profiles, from) {
+    const o = from || S.origin;
+    const f = walkDistFrom(o, profiles);
+    const m = f ? f(p) : null;
+    if (m !== null) return { m: m, path: true };
+    return { m: haversine(o.lat, o.lng, Number(p.lat), Number(p.lng)), path: false };
+  }
+
   // ───────────────────── 10-3. 가고 싶은 곳 + 날씨 맞춤 길안내 [팀원1 추가] ─────────────────────
   // 1) 상황을 고른 뒤 '어디 가요?'에서 시설 종류를 고르면, 지도에는 그 종류만 남기고
   //    목록에는 가까운 순으로 필요한 정보만 보여 준다(window.destList). 화장실은 원래 추천 목록을 그대로 쓴다.
@@ -1672,6 +1820,7 @@ ${kindVars}
         break;
       case 'aed':
         add(it.detail);
+        if (aedUnsure(it)) add('지도 위치가 실제와 다를 수 있음');
         break;
       case 'transit':
         if (e.kind === 'subway') {
@@ -1709,13 +1858,18 @@ ${kindVars}
     }
     if (d === 'transit') return computeTransitList(st);
     const rows = S.entries.filter((e) => DESTS[d].match(e)).map((e) => {
-      const m = haversine(S.origin.lat, S.origin.lng, e.item.lat, e.item.lng);
-      return { e: e, m: m, status: entryOpenStatus(e, now) };
+      const dist = distFromOrigin(e.item, st.profiles);   // [팀원1 수정] 걷는 길 거리(길을 못 찾으면 직선)
+      return { e: e, m: dist.m, path: dist.path, status: entryOpenStatus(e, now) };
     });
-    // 운영 안 하는 곳, 회원만 이용하는 쉼터는 뒤로
-    const later = (r) => (r.status === false ? 2 : 0) + (membersOnly(r.e) ? 1 : 0);
+    // 운영 안 하는 곳, 회원만 이용하는 쉼터, 좌표가 의심스러운 AED는 뒤로
+    const later = (r) => (r.status === false ? 2 : 0) + (membersOnly(r.e) ? 1 : 0) + (r.e.cat === 'aed' && aedUnsure(r.e.item) ? 1 : 0);
     rows.sort((a, b) => later(a) - later(b) || a.m - b.m);
     const top = rows.slice(0, DEST_LIST_MAX);
+    // 응급 화면 등에서 직접 고른 목적지가 목록 밖이면 끝에 붙여 길안내가 되게 한다
+    if (S.destTarget && !top.some((r) => r.e.item.lat + ',' + r.e.item.lng === S.destTarget)) {
+      const extra = rows.find((r) => r.e.item.lat + ',' + r.e.item.lng === S.destTarget);
+      if (extra) top.push(extra);
+    }
     S.destEntries = top.map((r) => r.e);
     return {
       dest: d,
@@ -1726,6 +1880,7 @@ ${kindVars}
         lat: r.e.item.lat,
         lng: r.e.item.lng,
         meters: Math.round(r.m),
+        pathBased: r.path,        // true: 걷는 길 기준, false: 직선거리 기준 [팀원1 추가]
         walkMin: Math.max(1, Math.round(walkMinutes(r.m, st.profiles))),
         status: r.status === true ? 'open' : r.status === false ? 'closed' : r.status === null ? 'unknown' : null,
         facts: destFacts(r.e, now),
@@ -1844,8 +1999,163 @@ ${kindVars}
       });
     }
     const path = [{ e: target, need: 'dest', label: label }];
-    insertWeatherStop(path, wx, profiles);
+    // AED는 급하게 가는 곳이라 날씨 경유지(음수대·쉼터)를 넣지 않는다 [팀원1 추가]
+    if (d !== 'aed') insertWeatherStop(path, wx, profiles);
+    else wx.notes = [];
     return buildPlan(path, { profiles: profiles, speed: speed, missing: [], basis: basis, title: '길안내', dest: d, weather: wx });
+  }
+
+  // ───────────────────── 10-6. 응급 화면: 지금 위치 설명 + 가까운 AED [팀원1 추가] ─────────────────────
+  // ui.js가 응급 버튼을 누르면 'emergencyopen'을 보낸다. 여기서 휴대폰 위치(GPS)를 새로 받아
+  //   window.emergencyInfo = { status, lat, lng, accuracy, placeText, far, basis, aeds:[{ name, detail, lat, lng, meters, walkMin, pathBased, count }] }
+  // 를 채우고 'emergencyready'를 보낸다. status: 'locating'(위치 받는 중) | 'ok' | 'nogps'(위치 못 받음) | 'nodata'(시설 데이터 전)
+  // 위치를 받기 전에도 지금 기준 위치로 AED를 먼저 찾아 한 번 보낸다(기다리지 않게).
+  // 기준점 좌표: 출입문·역은 출발지 버튼·transit.json(OpenStreetMap)과 같은 값,
+  //             경기장·광장은 KSPO 편의시설 데이터에서 그 장소 이름이 붙은 지점들의 평균 위치.
+  const EMERGENCY_LANDMARKS = [
+    { name: '평화의문(정문)', kind: 'gate', lat: 37.518313, lng: 127.115394 },
+    { name: '남2문', kind: 'gate', lat: 37.51449, lng: 127.12197 },
+    { name: '북2문', kind: 'gate', lat: 37.524095, lng: 127.128041 },
+    { name: '올림픽공원역', kind: 'station', lat: 37.516148, lng: 127.13093 },
+    { name: '몽촌토성역', kind: 'station', lat: 37.517533, lng: 127.11267 },
+    { name: '한성백제역', kind: 'station', lat: 37.51667, lng: 127.116213 },
+    { name: 'KSPO DOME(체조경기장)', kind: 'place', lat: 37.51932, lng: 127.127041 },
+    { name: 'SK핸드볼경기장', kind: 'place', lat: 37.517703, lng: 127.126494 },
+    { name: '올림픽홀', kind: 'place', lat: 37.515154, lng: 127.127099 },
+    { name: '우리금융아트홀', kind: 'place', lat: 37.517467, lng: 127.125023 },
+    { name: '올림픽수영경기장', kind: 'place', lat: 37.520654, lng: 127.126685 },
+    { name: '올림픽테니스장', kind: 'place', lat: 37.514955, lng: 127.128647 },
+    { name: '벨로드롬(사이클경기장)', kind: 'place', lat: 37.517498, lng: 127.123861 },
+    { name: '소마미술관', kind: 'place', lat: 37.516819, lng: 127.118666 },
+    { name: '한성백제박물관', kind: 'place', lat: 37.515572, lng: 127.120615 },
+    { name: '평화의 광장', kind: 'place', lat: 37.518447, lng: 127.116531 },
+    { name: '88호수', kind: 'place', lat: 37.520612, lng: 127.125612 },
+    { name: '88마당', kind: 'place', lat: 37.518674, lng: 127.125067 },
+    { name: '나홀로나무', kind: 'place', lat: 37.522295, lng: 127.119424 },
+    { name: '몽촌역사관', kind: 'place', lat: 37.524139, lng: 127.124125 },
+    { name: '만남의광장', kind: 'place', lat: 37.516885, lng: 127.129675 },
+    { name: '장미광장', kind: 'place', lat: 37.512982, lng: 127.127438 },
+    { name: '가족놀이동산', kind: 'place', lat: 37.523186, lng: 127.1229 },
+    { name: '몽촌해자', kind: 'place', lat: 37.519794, lng: 127.116541 },
+  ];
+  const DIR_WORDS = ['북', '북동', '동', '남동', '남', '남서', '서', '북서'];
+  const LANDMARK_RIGHT_HERE_M = 60;   // 이보다 가까우면 '바로 앞'
+  const LANDMARK_NEAR_M = 250;        // 이보다 가까운 경기장·광장은 '○○ 근처'로 덧붙인다
+  const LANDMARK_FAR_M = 1500;        // 가장 가까운 기준점도 이보다 멀면 공원 밖으로 본다
+
+  function aedUnsure(it) {
+    if (AED_UNSURE_COORDS.includes(Number(it.lat) + ',' + Number(it.lng))) return true;
+    const text = String(it.name || '') + ' ' + String(it.detail || '');
+    return AED_PLACE_CHECK.some(([re, lat, lng]) => re.test(text) && haversine(Number(it.lat), Number(it.lng), lat, lng) > AED_PLACE_MISMATCH_M);
+  }
+
+  function roughMeters(m) {
+    if (m >= 1000) return (Math.round(m / 100) / 10) + 'km';
+    if (m < 100) return Math.max(10, Math.round(m / 10) * 10) + 'm';
+    return Math.round(m / 50) * 50 + 'm';
+  }
+
+  // 기준점에서 본 방향(8방위)
+  function dirWord(from, to) {
+    const dy = to.lat - from.lat;
+    const dx = (to.lng - from.lng) * Math.cos(from.lat * Math.PI / 180);
+    const deg = (Math.atan2(dx, dy) * 180 / Math.PI + 360) % 360;
+    return DIR_WORDS[Math.round(deg / 45) % 8];
+  }
+
+  // "평화의문(정문)에서 북동쪽으로 약 200m, 소마미술관 근처" 같은 문장
+  function describeLocation(lat, lng) {
+    const me = { lat: lat, lng: lng };
+    const rows = EMERGENCY_LANDMARKS.map((l) => ({ l: l, d: haversine(lat, lng, l.lat, l.lng) })).sort((a, b) => a.d - b.d);
+    if (!rows.length) return { text: '', far: true };
+    if (rows[0].d > LANDMARK_FAR_M) {
+      return { text: '올림픽공원에서 떨어진 곳이에요(가장 가까운 ' + rows[0].l.name + '에서 약 ' + roughMeters(rows[0].d) + '). 주변 큰 건물이나 도로 이름을 함께 알려 주세요.', far: true };
+    }
+    const anchor = rows.find((r) => r.l.kind !== 'place');
+    const place = rows.find((r) => r.l.kind === 'place');
+    const parts = [];
+    if (anchor.d <= LANDMARK_RIGHT_HERE_M) parts.push(anchor.l.name + ' 바로 앞');
+    else parts.push(anchor.l.name + '에서 ' + dirWord(anchor.l, me) + '쪽으로 약 ' + roughMeters(anchor.d));
+    if (place && place.d <= LANDMARK_NEAR_M) parts.push(place.l.name + (place.d <= LANDMARK_RIGHT_HERE_M ? ' 바로 앞' : ' 근처'));
+    const text = parts.join(', ');
+    return { text: /^올림픽공원/.test(text) ? text : '올림픽공원 ' + text, far: false };
+  }
+
+  // 가까운 AED: 같은 좌표(같은 건물)는 한 곳으로 묶고, 좌표가 의심스러운 곳은 뺀다. 거리는 걷는 길(계단 포함) 기준
+  function nearestAeds(from) {
+    const groups = new Map();
+    (S.data.aed || []).filter(validPoint).forEach((a) => {
+      if (aedUnsure(a)) return;
+      const k = Number(a.lat) + ',' + Number(a.lng);
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(a);
+    });
+    const rows = [];
+    groups.forEach((list) => {
+      const a = list[0];
+      const dist = distFromOrigin(a, [], from);
+      rows.push({
+        name: a.name || 'AED',
+        detail: String(a.detail || '').replace(/\s+/g, ' ').trim() + (list.length > 1 ? ' 외 같은 건물에 ' + (list.length - 1) + '대 더' : ''),
+        lat: Number(a.lat), lng: Number(a.lng),
+        meters: Math.round(dist.m), pathBased: dist.path,
+        walkMin: Math.max(1, Math.round(dist.m / SPEED_NORMAL)),
+        count: list.length,
+      });
+    });
+    rows.sort((x, y) => x.meters - y.meters);
+    return rows.slice(0, EMERGENCY_AED_COUNT);
+  }
+
+  function sendEmergency(info) {
+    window.emergencyInfo = info;
+    document.dispatchEvent(new CustomEvent('emergencyready', { detail: { emergencyInfo: info } }));
+  }
+
+  function emergencyFromOrigin(status) {
+    const label = (S.originLabel || '공원 중심').replace(/\s*\(기본값\)/, '');
+    return {
+      status: status,
+      basis: '출발 위치(' + label + ') 기준',
+      aeds: S.data && S.origin ? nearestAeds(S.origin) : [],
+    };
+  }
+
+  function onEmergencyOpen() {
+    S.emergencyWanted = true;
+    if (!S.data || !S.origin) { sendEmergency({ status: 'nodata', aeds: [] }); return; }   // 데이터가 오면 다시 부른다
+    S.emergencyWanted = false;
+    sendEmergency(emergencyFromOrigin('locating'));
+    if (!('geolocation' in navigator)) { sendEmergency(emergencyFromOrigin('nogps')); return; }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        const where = describeLocation(lat, lng);
+        S.emergencyGps = { lat: lat, lng: lng };
+        sendEmergency({
+          status: 'ok', lat: lat, lng: lng, accuracy: Math.round(pos.coords.accuracy || 0),
+          placeText: where.text, far: where.far,
+          basis: '내 위치 기준',
+          aeds: nearestAeds({ lat: lat, lng: lng }),
+        });
+      },
+      () => { S.emergencyGps = null; sendEmergency(emergencyFromOrigin('nogps')); },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+    );
+  }
+
+  // 응급 화면에서 'AED까지 길 보기': 내 위치(받았으면)에서 그 AED까지 길안내. ui.js가 먼저 목적지를 'AED'로 바꾼다
+  function onEmergencyRoute(lat, lng) {
+    if (!S.data) return;
+    const k = Number(lat) + ',' + Number(lng);
+    S.destTarget = k;
+    S.lastDest = 'aed';
+    const g = S.emergencyGps;
+    if (g) setOrigin(g.lat, g.lng, '내 위치', 'gps');   // 안에서 recompute()
+    else recompute();
+    const target = S.entries.find((e) => e.cat === 'aed' && e.item.lat + ',' + e.item.lng === k);
+    if (target) openEntryPopup(target, true);
   }
 
   // ───────────────────── 11. 추천 + 강조 다시 계산 ─────────────────────
@@ -1855,7 +2165,8 @@ ${kindVars}
     const now = new Date();
 
     // (1) 화장실 추천
-    window.recommendations = computeRecommendations(S.data.toilets, S.origin, st.profiles, st.filters, now);
+    window.recommendations = computeRecommendations(S.data.toilets, S.origin, st.profiles, st.filters, now,
+      (t) => distFromOrigin(t, st.profiles));   // [팀원1 수정] 걷는 길 거리로 점수·도보 시간 계산
     // (1-1) 가고 싶은 곳 목록 (화장실이 아니면 가까운 순, 필요한 정보만)
     window.destList = computeDestList(now);
     // (1-2) 추천 동선(들를 곳 순서) 또는 가고 싶은 곳까지 길안내. 상황도 목적지도 없으면 null
@@ -2270,6 +2581,8 @@ ${kindVars}
     document.addEventListener('originpick', (e) => { const d = (e && e.detail) || {}; if (S.data && S.origin) pickOrigin(d.key); });
     document.addEventListener('themechange', (e) => { const d = (e && e.detail) || {}; if (S.overlayReady) applyMapTheme(d.theme === 'dark'); });
     document.addEventListener('focusplace', (e) => { const d = (e && e.detail) || {}; if (S.data) onFocusPlace(d.lat, d.lng); });
+    document.addEventListener('emergencyopen', onEmergencyOpen);                       // [팀원1 추가] 응급 화면
+    document.addEventListener('emergencyroute', (e) => { const d = (e && e.detail) || {}; onEmergencyRoute(d.lat, d.lng); });
 
     const dataPromise = loadData().then((d) => ({ ok: true, d: d }), (err) => ({ ok: false, err: err }));
     const picked = await pickStyle();
@@ -2336,6 +2649,9 @@ ${kindVars}
       setOrigin(e.lngLat.lat, e.lngLat.lng, '지도에서 고른 위치', 'custom');
     });
     initLocation(); // 안에서 recompute()가 불린다
+    if (S.emergencyWanted) onEmergencyOpen();   // 데이터가 오기 전에 응급 화면을 열었으면 지금 다시 찾는다
+    // 공유 링크로 '가고 싶은 곳'이 정해져 왔으면 그 종류 레이어를 켜고 길안내를 만든다
+    if (currentDest() !== 'all') onDestinationChange();
 
     // '직접 찾아가기' 게임 모드(game.js)는 지도·데이터가 준비된 뒤 불러온다. 없거나 실패해도 지도는 그대로 동작
     loadScript('game.js').catch((err) => console.warn('[map.js] game.js를 불러오지 못했어요(게임 모드만 빠져요):', err));

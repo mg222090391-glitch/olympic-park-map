@@ -3404,7 +3404,7 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
     } : emptyFC());
     // 동선이 있으면 화장실 연결선은 숨겨 지도를 덜 복잡하게
     const dNow = currentDest();
-    const hideRecLines = hasRoute || (dNow !== 'all' && dNow !== 'toilet');
+    const hideRecLines = hasRoute || (dNow !== 'all' && dNow !== 'toilet') || S.parkingOnly;
     ['op-rec-casing', 'op-rec-line'].forEach((id) => S.map.setLayoutProperty(id, 'visibility', hideRecLines ? 'none' : 'visible'));
     // 들를 곳이 바뀌었을 때만, 기준 위치와 들를 곳이 모두 보이게 지도를 맞춘다
     const routeKey = hasRoute ? S.origin.lat + ',' + S.origin.lng + '>' + plan.stops.map((x) => x.lat + ',' + x.lng).join('|') + (plan.pathBased ? '|p' : '') : '';
@@ -3489,12 +3489,98 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
   }
 
   // 다른 팀원이 콘솔에서 확인할 수 있게 계산 함수를 열어 둔다(서비스 동작에는 영향 없음)
+  // ───────────────────── 14-2. 주차장만 보기 [주차 화면] ─────────────────────
+  // parking.js가 'parkingmap' { on: true, lots: [{ name, lat, lng, rank, inPark, html }], dest: { name, lat, lng } }를 보내면
+  // 다른 마커·길안내 선은 숨기고 주차장만 번호와 함께 보여 준다. { on: false }면 원래대로.
+  const PARKING_HIDE_LAYERS = ['op-route-glow', 'op-route-casing', 'op-route-line', 'op-walk-fill', 'op-walk-line',
+    'op-reach-line', 'op-smoke-fill', 'op-smoke-line'];
+  S.parkingOnly = false;
+  S.parkingMarkers = [];
+
+  function clearParkingMarkers() {
+    S.parkingMarkers.forEach((m) => m.remove());
+    S.parkingMarkers = [];
+  }
+
+  function parkingPin(lot) {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'pk-marker' + (lot.inPark ? ' is-inpark' : '') + (lot.dest ? ' is-dest' : '');
+    el.setAttribute('aria-label', lot.dest ? '가려는 곳: ' + lot.name : (lot.rank ? lot.rank + '번 ' : '') + lot.name);
+    el.innerHTML = lot.dest ? '<span class="pk-pin">★</span>' :
+      '<span class="pk-pin">P</span>' + (lot.rank ? '<span class="pk-rank">' + esc(lot.rank) + '</span>' : '');
+    el.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      S.popup.setLngLat(ll(lot.lat, lot.lng))
+        .setHTML(lot.html || '<div class="pop"><h3 class="pop-title">' + esc(lot.name) + '</h3></div>')
+        .addTo(S.map);
+    });
+    return el;
+  }
+
+  function setParkingOnly(detail) {
+    if (!S.map) return;
+    const on = !!(detail && detail.on);
+    S.parkingOnly = on;
+    const box = S.map.getContainer();
+    box.classList.toggle('parking-only', on);
+    clearParkingMarkers();
+    if (S.popup) S.popup.remove();
+    // 지도 위 '모든 시설 다시 보기' 버튼
+    if (!S.parkingExitBtn) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'pk-exit';
+      b.textContent = '주차장만 보는 중 · 모든 시설 다시 보기';
+      b.addEventListener('click', () => setParkingOnly({ on: false }));
+      box.appendChild(b);
+      S.parkingExitBtn = b;
+    }
+    S.parkingExitBtn.hidden = !on;
+    PARKING_HIDE_LAYERS.forEach((id) => {
+      if (S.map.getLayer(id)) S.map.setLayoutProperty(id, 'visibility', on ? 'none' : 'visible');
+    });
+    if (!on) { recompute(); return; }
+    const pts = (detail.lots || []).filter((l) => Number.isFinite(Number(l.lat)) && Number.isFinite(Number(l.lng)));
+    if (detail.dest) pts.push(Object.assign({ dest: true }, detail.dest));
+    pts.forEach((l) => {
+      const m = new maplibregl.Marker({ element: parkingPin(l), anchor: 'bottom' })
+        .setLngLat(ll(Number(l.lat), Number(l.lng))).addTo(S.map);
+      S.parkingMarkers.push(m);
+    });
+    if (pts.length) {
+      try { S.map.resize(); } catch (e) { /* 무시 */ }   // 화면이 막 바뀌었을 수 있어 크기부터 맞춘다
+      const b = new maplibregl.LngLatBounds(ll(pts[0].lat, pts[0].lng), ll(pts[0].lat, pts[0].lng));
+      pts.forEach((l) => b.extend(ll(Number(l.lat), Number(l.lng))));
+      const h = S.map.getContainer().clientHeight;
+      S.map.fitBounds(b, { padding: { top: Math.round(h * 0.14), bottom: Math.round(h * 0.22), left: 50, right: 70 },
+        maxZoom: 16.5, duration: reducedMotion() ? 0 : 900 });
+    }
+    updateOverlays();
+  }
+  document.addEventListener('parkingmap', (e) => setParkingOnly(e.detail || { on: false }));
+  // 다른 곳을 고르거나 목록에서 장소를 누르면 주차장만 보기를 끈다
+  ['destinationchange', 'focusplace', 'emergencyroute'].forEach((ev) => {
+    document.addEventListener(ev, () => { if (S.parkingOnly) setParkingOnly({ on: false }); });
+  });
+
+  // 두 곳 사이 걷는 거리: { m, path }. path가 false면 길 데이터로 이어지지 않아 직선거리로 잰 값
+  function walkMetersBetween(a, b, profiles) {
+    const A = { lat: Number(a.lat), lng: Number(a.lng) };
+    const B = { lat: Number(b.lat), lng: Number(b.lng) };
+    const leg = walkLeg(A, B, profiles || []);
+    if (leg) return { m: leg.meters, path: true };
+    return { m: haversine(A.lat, A.lng, B.lat, B.lng), path: false };
+  }
+
   window.mapUtils = {
     haversine, walkSpeed, walkMinutes, stallsFor, computeRecommendations,
     parseTimeRanges, parseDays, openStatusFromText, toiletOpenNow, heatShelterOpenNow, chargerOpenNow,
     checkOpenValues, focusPlace: (lat, lng) => focusPlace(lat, lng),
     set3D: (on) => set3D(on), resetView: () => resetView(),
     getMap: () => S.map, // MapLibre 지도 객체(디버깅용)
+    walkMetersBetween: (a, b, profiles) => walkMetersBetween(a, b, profiles),   // [주차 화면] 주차장 → 가려는 곳 걷는 거리
+    hasWalkGraph: () => !!S.walk,
   };
 
   // ───────────────────── 15. 시작 ─────────────────────

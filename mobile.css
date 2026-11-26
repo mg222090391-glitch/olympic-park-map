@@ -202,6 +202,9 @@ body.app .em-btn-sub {
 /* style.css의 큰 화면 배치(옆 칸·따라오는 지도)를 끈다 */
 body.app .card { padding: 16px 14px; }
 body.app .map-card { position: static !important; top: auto !important; }
+/* 컴퓨터 너비(1024px 이상)에서 style.css가 카드에 align-self: start를 걸어
+   지도·추천 카드가 내용 너비만큼 좁아지던 문제를 막는다. 모든 카드는 화면 너비를 꽉 채운다 */
+body.app .screen > * { align-self: stretch !important; width: auto; max-width: none; }
 
 /* ---------- 5. 홈 ---------- */
 .home-menu {

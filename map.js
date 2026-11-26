@@ -50,6 +50,9 @@
   const FOCUS_ZOOM = 18;
   const PITCH_3D = 58;                         // 3D로 볼 때 기울기(도)
   const BEARING_3D = -28;                      // 3D로 볼 때 방향(도). 북쪽이 0
+  // 처음 열 때 지도 시점. false = 바로 위(90도)에서 내려다보는 평면 지도, 북쪽이 위.
+  // 지도 오른쪽의 '3D' 버튼을 누르면 기울여서 입체로 볼 수 있다. true로 바꾸면 예전처럼 3D로 시작한다.
+  const START_IN_3D = false;
   const ICON_SIZE = [30, 30];                  // 마커 칸 크기(px). style.css의 .mk::before(30px)와 맞춤
   const OUTSIDE_PARK_M = 300;                  // 가장 가까운 공원 시설에서 이보다 멀면 '공원 밖'으로 본다(가정값)
   const SPEED_NORMAL = 67;                     // 분당 m (가정): 일반·공연 대기
@@ -2712,6 +2715,8 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
       } catch (e) { /* 무시 */ }
     });
     S.extrusionLayers = ids;
+    // 평면(위에서 내려다보기)으로 시작하면 입체 건물은 숨겨 두고, '3D' 버튼을 누를 때 보인다
+    if (!S.is3D) ids.forEach((id) => { try { S.map.setLayoutProperty(id, 'visibility', 'none'); } catch (e) { /* 무시 */ } });
   }
 
   function decorateMap() {
@@ -3267,7 +3272,7 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
       document.dispatchEvent(new CustomEvent('mapdataerror', { detail: { error: String(err) } }));
       return;
     }
-    S.is3D = picked.is3D;
+    S.is3D = picked.is3D && START_IN_3D;   // 처음에는 위에서 내려다보기(START_IN_3D)
     S.popup = new maplibregl.Popup({ maxWidth: '280px', offset: POPUP_OFFSET, focusAfterOpen: false });
     S.popup.on('close', () => { S.popupEntry = null; });
 

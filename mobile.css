@@ -531,3 +531,188 @@ html[data-size="large"] body.app .home-menu { grid-template-columns: 1fr; }
   .tile-icon { grid-row: auto; width: 34px; height: 34px; }
   body.app .dest-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* ---------- 12. 주차 안내 화면 (parking.js) ---------- */
+.pk-controls {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface-2);
+}
+.pk-field { display: grid; gap: 6px; }
+.pk-field > label, .pk-label { font-size: 0.875rem; font-weight: 800; color: var(--c-navy); }
+.pk-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; }
+.pk-controls select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font: inherit;
+  font-size: 0.9375rem;
+}
+.pk-now { min-height: 44px; padding: 0 14px; }
+.pk-chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.pk-chip, .pk-tab {
+  min-height: 42px;
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pk-chip[aria-pressed="true"], .pk-tab[aria-pressed="true"] {
+  border-color: var(--c-primary);
+  background: var(--c-primary-soft);
+  color: var(--c-primary-strong);
+  box-shadow: 0 0 0 1px var(--c-primary) inset;
+}
+.pk-body { display: grid; gap: 12px; margin-top: 12px; }
+.pk-block { display: grid; gap: 8px; }
+.pk-block h3 { font-size: 1rem; font-weight: 800; color: var(--c-navy); }
+.pk-block ul { margin: 0; padding-left: 1.1em; display: grid; gap: 4px; font-size: 0.9rem; }
+
+/* 도착 시각 붐빔: 색 + 글자(여유·보통·붐빔)로 함께 알린다 */
+.pk-busy {
+  padding: 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--c-border);
+  border-left: 6px solid var(--pk-c, var(--c-primary));
+  background: var(--c-surface);
+}
+.pk-busy.is-free   { --pk-c: #2b8a3e; }
+.pk-busy.is-normal { --pk-c: #d98a00; }
+.pk-busy.is-busy   { --pk-c: #c8191f; }
+.pk-busy-when { font-size: 0.8125rem; color: var(--c-muted); font-weight: 700; }
+.pk-busy-level { font-size: 1.125rem; font-weight: 800; color: var(--c-text); }
+.pk-level {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 2px 10px;
+  border-radius: 6px;
+  background: var(--pk-c);
+  color: #fff;
+}
+.pk-busy.is-normal .pk-level { color: #1b1300; }
+.pk-busy-desc, .pk-busy-tip { font-size: 0.875rem; line-height: 1.55; color: var(--c-muted); }
+.pk-busy-tip { color: var(--c-text); }
+
+.pk-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.pk-tab-desc { font-size: 0.8125rem; color: var(--c-muted); }
+.pk-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.pk-card {
+  padding: 12px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface);
+}
+.pk-card-head { display: flex; gap: 10px; align-items: flex-start; }
+.pk-rank-num {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px; height: 30px;
+  border-radius: 6px;
+  background: var(--kspo-navy);
+  color: #fff;
+  font-weight: 800;
+}
+html[data-theme="dark"] .pk-rank-num { background: var(--c-primary); color: #0b1220; }
+.pk-card-title { min-width: 0; }
+.pk-card-title h4 { margin: 0; font-size: 1rem; font-weight: 800; line-height: 1.3; color: var(--c-text); }
+.pk-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.pk-tag {
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--c-border-strong);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--c-muted);
+}
+.pk-tag.is-inpark { border-color: var(--c-primary); color: var(--c-primary-strong); }
+.pk-tag.is-open { border-color: #2b8a3e; color: #2b8a3e; }
+.pk-tag.is-closed { border-color: #c8191f; color: #c8191f; }
+html[data-theme="dark"] .pk-tag.is-open { color: #8fe0b4; border-color: #8fe0b4; }
+html[data-theme="dark"] .pk-tag.is-closed { color: #ff8a80; border-color: #ff8a80; }
+.pk-rows { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 3px; font-size: 0.875rem; line-height: 1.5; }
+.pk-rows li { display: grid; grid-template-columns: 64px 1fr; column-gap: 6px; }
+.pk-rows b { color: var(--c-muted); font-weight: 700; }
+.pk-rows .pk-warn { color: #a61b1b; }
+html[data-theme="dark"] .pk-rows .pk-warn { color: #ff8a80; }
+.pk-actions { display: grid; grid-template-columns: 1.3fr 1fr; gap: 6px; margin-top: 10px; }
+.pk-actions .btn { min-height: 44px; padding: 0 8px; font-size: 0.875rem; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+.pk-map-all { width: 100%; min-height: 48px; }
+
+.pk-nopark {
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: #fff4f4;
+  border: 1px solid #f2c4c4;
+}
+.pk-nopark h3 { color: #a61b1b; }
+html[data-theme="dark"] .pk-nopark { background: #2a1717; border-color: #5a2a2a; }
+html[data-theme="dark"] .pk-nopark h3 { color: #ff8a80; }
+.pk-facts { padding: 12px 14px; border: 1px solid var(--c-border); border-radius: var(--radius-sm); }
+.pk-data { font-size: 0.8125rem; color: var(--c-muted); }
+.pk-data summary { cursor: pointer; font-weight: 700; min-height: 40px; display: flex; align-items: center; }
+
+/* 지도: 주차장만 보기 */
+#map.parking-only .maplibregl-marker:not(.pk-marker) { display: none !important; }
+.pk-marker {
+  /* position은 지도 라이브러리가 정한다(absolute). 여기서 바꾸면 마커 자리가 어긋난다 */
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.pk-pin {
+  display: grid;
+  place-items: center;
+  width: 34px; height: 34px;
+  border-radius: 8px;
+  background: #0d55cf;
+  color: #fff;
+  font: 900 18px/1 system-ui, sans-serif;
+  border: 2px solid #fff;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+}
+.pk-marker.is-inpark .pk-pin { background: #0b2a55; }
+.pk-marker.is-dest .pk-pin { background: #c8191f; border-radius: 50%; font-size: 16px; }
+.pk-rank {
+  position: absolute;
+  top: -8px; right: -8px;
+  min-width: 20px; height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #ffbf47;
+  color: #1b1300;
+  font: 800 12px/20px system-ui, sans-serif;
+  text-align: center;
+  border: 2px solid #fff;
+}
+.pk-exit {
+  position: absolute;
+  left: 12px;
+  bottom: 70px;             /* '길안내 목록 보기' 버튼 바로 위 */
+  z-index: 6;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: #0b2a55;
+  color: #fff;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(11, 42, 85, 0.3);
+  cursor: pointer;
+}

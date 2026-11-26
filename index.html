@@ -304,20 +304,14 @@
 
     <!-- ── 주차 ── -->
     <div class="screen" data-screen="parking" aria-label="주차">
-      <section id="parking-section" class="card" aria-labelledby="parking-title">
-        <h2 id="parking-title" class="card-title"><span class="title-icon" aria-hidden="true">🅿️</span>주차장 붐비는 시간</h2>
-        <p class="sub-line">동2문·남2문·북2문 주차장, 시간대별 평균 주차 대수</p>
-
-        <div class="chart-box">
-          <canvas id="parking-chart" role="img"
-                  aria-label="평일과 주말의 시간대별 평균 주차 대수 그래프. 평일은 오전 10~11시, 주말은 오후 5시에 가장 붐벼요."></canvas>
+      <section id="parking-section" class="card pk-card-main" aria-labelledby="parking-title">
+        <h2 id="parking-title" class="card-title">주차 안내</h2>
+        <p class="sub-line">차로 올 때 언제, 어디에 세울지 골라요</p>
+        <!-- 입력 칸과 결과는 parking.js가 채운다 -->
+        <div class="pk-controls" data-role="pk-controls"></div>
+        <div class="pk-body" data-role="pk-body">
+          <p class="status is-loading">주차 정보를 불러오는 중이에요…</p>
         </div>
-
-        <ul class="parking-notes">
-          <li><b>평일</b>은 오전 10~11시(평균 약 960대), <b>주말</b>은 오후 5시(평균 약 1,200대)에 가장 붐벼요.</li>
-          <li>가장 붐빈 날은 7월 21일(일) 오후 5시로, 약 2,180대가 주차돼 있었어요(평소 주말의 약 2배).</li>
-          <li>2024년 7월 입출차 기록의 평균이에요. 주차장 전체 면수 정보가 없어서 “몇 % 찼다”는 알 수 없고, 평소보다 붐비는 시간대만 보여드려요.</li>
-        </ul>
       </section>
     </div>
 
@@ -335,7 +329,8 @@
             <li>KSPO 올림픽공원 편의시설 정보는 2021년에 한 번 수집된 데이터라 현재와 다를 수 있어요.</li>
             <li>화장실 좌표는 카카오맵 개방화장실 위치로 보정했어요. 몽촌역사관 화장실은 ‘서울백제어린이박물관 개방화장실’(옛 몽촌역사관 건물로 추정) 좌표를 썼어요.</li>
             <li>칸 수 정보가 없는 화장실 9곳은 지도에는 보이지만 추천에서는 빠져요.</li>
-            <li>주차장 전체 면수가 없어서 점유율(%)은 계산할 수 없어요.</li>
+            <li>올림픽공원 입출차 기록에는 주차장 구분 칸이 없어 주차장별 혼잡은 알 수 없고, 공원 전체 붐빔만 평소 대비로 보여 드려요. 전체 면수 정보도 없어 점유율(%)은 계산할 수 없어요.</li>
+          <li>공원 안 동2문·남2문·북2문 주차장은 전국주차장정보표준데이터에 없어 요금·면수를 보여 드릴 수 없어요. 주차 화면의 요금은 공원 근처 공영주차장 5곳의 기본·추가요금으로 계산한 예상값이에요.</li>
             <li>‘공원 경계까지 거리’는 KSPO 편의시설 지점 중 가장 가까운 지점까지의 거리로 계산했어요.</li>
             <li>지하철역·버스정류장·버스 노선은 OpenStreetMap 데이터라 빠지거나 바뀐 곳이 있을 수 있어요. ‘택시 타기 좋은 곳’은 공식 승강장이 아니라 큰길과 이어지는 출입구를 추천한 곳이에요.</li>
             <li>길안내 선과 거리는 OpenStreetMap의 보도·산책로·다리 데이터로 계산했어요. 경사·공사·통제 구간은 반영되지 않아요. 추천 목록·팝업의 거리도 같은 길 기준이라 길안내 숫자와 같아요.</li>
@@ -357,6 +352,8 @@
             <li><a href="https://www.data.go.kr/data/15098148/fileData.do" target="_blank" rel="noopener">서울시 지하철역 엘리베이터 위치정보</a></li>
             <li><a href="https://www.data.go.kr/data/15047371/fileData.do" target="_blank" rel="noopener">서울시 자동심장충격기(AED) 설치정보</a></li>
             <li><a href="https://www.data.go.kr/data/15012896/standard.do" target="_blank" rel="noopener">전국주차장정보표준데이터</a></li>
+          <li><a href="https://www.data.go.kr/tcs/dss/selectDataSetList.do?keyword=%EC%A0%84%EA%B5%AD%EC%A3%BC%EC%A0%95%EC%B0%A8%EA%B8%88%EC%A7%80" target="_blank" rel="noopener">전국주정차금지(지정)구역표준데이터</a></li>
+          <li><a href="https://www.data.go.kr/tcs/dss/selectDataSetList.do?keyword=%EC%B0%A8%EB%9F%89%20%EC%B6%9C%EC%9E%85%EA%B5%AC%20%EC%A0%95%EB%B3%B4" target="_blank" rel="noopener">서울시 차량 출입구 정보</a></li>
             <li><a href="https://www.data.go.kr/data/15082972/fileData.do" target="_blank" rel="noopener">국립중앙의료원 전국 약국 정보 (운영시간)</a></li>
             <li><a href="https://www.e-gen.or.kr/egen/search_emergency_room.do" target="_blank" rel="noopener">국립중앙의료원 E-GEN 응급실·병원(보건소) 찾기</a></li>
             <li><a href="https://www.data.go.kr/data/15084084/openapi.do" target="_blank" rel="noopener">기상청 단기예보(API)</a></li>
@@ -444,14 +441,13 @@
   <noscript><p class="status is-error">이 서비스는 자바스크립트가 켜져 있어야 동작해요.</p></noscript>
 
   <!-- ===== 스크립트 순서 (팀 약속 7번: 바꾸지 말 것. nav.js는 맨 끝에 덧붙임) ===== -->
-  <!-- 1) 외부 라이브러리: MapLibre GL(3D 지도), Chart.js(그래프) -->
+  <!-- 1) 외부 라이브러리: MapLibre GL(3D 지도) -->
   <script src="https://unpkg.com/maplibre-gl@5.24.1/dist/maplibre-gl.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
   <!-- 2) 우리 파일 -->
   <script src="ui.js"></script>       <!-- 팀원3: 상황 선택, 필터, 카드·목록 그리기 -->
   <script src="map.js"></script>      <!-- 팀원1: 지도, 추천 계산 -->
   <script src="weather.js"></script>  <!-- 팀원2: 날씨, 규칙 판단 -->
-  <script src="parking.js"></script>  <!-- 팀원2: 주차 그래프 -->
+  <script src="parking.js"></script>  <!-- 팀원2: 주차 안내 (언제·어디에 세울지) -->
   <script src="nav.js"></script>      <!-- 휴대폰 화면 바꾸기 (탭·홈 메뉴) -->
 </body>
 </html>

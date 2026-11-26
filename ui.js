@@ -1388,7 +1388,7 @@
     var html = '';
     html += '<li><span class="visit-icon" aria-hidden="true">🌤️</span><span><b>날씨</b> ' + weatherLine() + '</span></li>';
     html += '<li><span class="visit-icon" aria-hidden="true">🅿️</span><span><b>주차</b> ' + esc(parkingLine()) +
-      ' <a href="#parking-section" class="visit-link">시간대별 그래프</a></span></li>';
+      ' <a href="#parking-section" class="visit-link">주차 안내 보기</a></span></li>';
     if (!p.length) {
       html += '<li><span class="visit-icon" aria-hidden="true">🧭</span><span><b>추천</b> 아래에서 <a href="#profile-select" class="visit-link">내 상황</a>을 고르면 맞는 곳을 골라 드려요.</span></li>';
     } else {

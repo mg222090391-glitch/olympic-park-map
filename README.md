@@ -141,13 +141,11 @@ python3 tools/build_walk_graph.py 받은파일.json data/walk_graph.json
 
 ## 팀
 
-| 역할 | 맡은 일 |
-|---|---|
-| 팀원1 | 지도·추천·길안내 (`map.js`), 걷는 길·교통 데이터, 공유·QR |
-| 팀원2 | 날씨·주차·데이터 (`weather.js`, `parking.js`, `worker/worker.js`, `data/`) |
-| 팀원3 | 화면·디자인 (`ui.js`, `style.css`, `index.html`) |
-
-<!-- 팀원 이름은 직접 채워 주세요 -->
+| 이름 | 역할 | 맡은 일 |
+|---|---|---|
+| 이서준 | 팀원1 · 지도·추천 | 지도·추천·길안내 (`map.js`), 걷는 길·교통 데이터, 응급 화면, 공유·QR |
+| 김은혜 | 팀원2 · API·데이터 | 날씨·주차·데이터 (`weather.js`, `parking.js`, `worker/worker.js`, `data/`) |
+| 이이삭 | 팀원3 · 인터페이스 | 화면·디자인 (`ui.js`, `style.css`, `index.html`) |
 
 ## 출처 표시
 

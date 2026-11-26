@@ -59,7 +59,7 @@
   const ELDERLY_NEAR_COUNT = 3;                // 'elderly'일 때 강조할 가까운 화장실 수
   const CONCERT_FACILITY_RE = /자판기|편의점|매점|스낵|카페|식음/; // 공연 대기 때 강조할 편의시설 종류
   const REFRESH_MS = 5 * 60 * 1000;            // "지금 열림" 판단을 5분마다 다시 한다
-  const ROUTE_COLOR = '#db2777';               // 추천 동선(들를 곳 순서) 선 색
+  const ROUTE_COLOR = '#0d55cf';               // 추천 동선(들를 곳 순서) 선 색 (화면 기본 파랑과 같은 색)
   const ROUTE_MAX_STOPS = 4;
   const REST_FACILITY_RE = /휴게|쉼터|벤치|그늘|쉼터/;  // 편의시설 중 '쉴 곳'으로 볼 종류
   const NURSING_FACILITY_RE = /수유/;
@@ -2367,7 +2367,7 @@ ${kindVars}
       paint: { 'line-color': '#ffffff', 'line-width': ['interpolate', ['linear'], ['zoom'], 14, 6, 18, 11], 'line-opacity': 0.95 } }, before);
     S.map.addLayer({ id: 'op-route-line', type: 'line', source: 'op-route', layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: { 'line-width': ['interpolate', ['linear'], ['zoom'], 14, 3.5, 18, 6.5],
-        'line-gradient': ['interpolate', ['linear'], ['line-progress'], 0, '#2563eb', 0.5, '#9333ea', 1, ROUTE_COLOR] } }, before);
+        'line-gradient': ['interpolate', ['linear'], ['line-progress'], 0, '#60a5fa', 0.5, '#2f74e6', 1, ROUTE_COLOR] } }, before);
     S.overlayReady = true;
     applyMapTheme(isDarkTheme());
   }

@@ -12,6 +12,8 @@
    7) 추천 목록 항목 누르면 → 'focusplace' 보냄 (detail: { lat, lng })
    8) '어디 가요?' 버튼 → appState.destination 갱신 → 'destinationchange' 보냄 [팀원1 추가]
    9) 출발지 버튼 → 'originpick' 보냄, map.js의 'originchange'를 들으면 눌린 버튼·문구를 맞춘다 [팀원1 추가]
+  10) 어두운 화면(다크모드) 버튼 → <html data-theme> 바꾸고 'themechange' 보냄 [팀원1 추가]
+  11) 음성 안내: 길안내·교통 브리핑을 브라우저 음성(한국어)으로 읽어 준다 [팀원1 추가]
       화장실이 아닌 곳을 고르면 #recommend-list에 window.destList(가까운 순, 필요한 정보만)를 그린다
    ※ 이벤트는 모두 document에서 보내고 듣는다 (팀 약속 7번)
    ===================================================================== */
@@ -48,19 +50,19 @@
   };
 
   // 가고 싶은 곳 [팀원1 추가]
-  var DEST_ORDER = ['all', 'toilet', 'rest', 'shop', 'water', 'charger', 'elevator', 'aed'];
+  var DEST_ORDER = ['all', 'toilet', 'rest', 'shop', 'water', 'charger', 'transit', 'elevator', 'aed'];
   var DEST_LABEL = {
     all: '전체', toilet: '화장실', rest: '쉴 곳(쉼터)', shop: '매점·자판기', water: '음수대',
-    charger: '전동휠체어 충전기', elevator: '지하철 엘리베이터', aed: 'AED(자동심장충격기)'
+    charger: '전동휠체어 충전기', elevator: '지하철 엘리베이터', aed: 'AED(자동심장충격기)', transit: '역·버스·택시'
   };
-  var DEST_ICON = { all: '🗺️', toilet: '🚻', rest: '🪑', shop: '🛒', water: '🚰', charger: '🔌', elevator: '🛗', aed: '💓' };
+  var DEST_ICON = { all: '🗺️', toilet: '🚻', rest: '🪑', shop: '🛒', water: '🚰', charger: '🔌', elevator: '🛗', aed: '💓', transit: '🚉' };
   // 상황별로 '추천' 표시를 붙일 곳
   var DEST_FOR_PROFILE = {
     wheelchair: ['toilet', 'charger', 'elevator'],
     stroller: ['toilet', 'elevator', 'rest'],
     elderly: ['rest', 'toilet'],
     pregnant: ['toilet', 'rest'],
-    concert: ['toilet', 'shop', 'water']
+    concert: ['toilet', 'shop', 'water', 'transit']
   };
   var DEST_KEYWORDS = {
     toilet: ['화장실', '볼일', '소변'],
@@ -68,7 +70,8 @@
     shop: ['매점', '편의점', '자판기', '음료', '간식', '먹을'],
     water: ['음수대', '물마', '목말'],
     charger: ['충전'],
-    elevator: ['엘리베이터', '승강기', '지하철'],
+    transit: ['택시', '버스', '지하철', '정류장', '교통', '역까지', '집에'],
+    elevator: ['엘리베이터', '승강기'],
     aed: ['aed', '심장', '제세동', '쓰러']
   };
   var WEATHER_ICON = { hot: '☀️', cold: '❄️', rain: '☔' };
@@ -648,7 +651,17 @@
       body.innerHTML = '<div class="rec-empty"><b>가까운 ' + esc(list.label) + ' 정보가 없어요.</b>다른 곳을 골라 보세요.</div>';
       return;
     }
-    var html = '<ol class="rec-list dest-list">';
+    var html = '';
+    // 교통 브리핑(역·버스·택시를 골랐을 때)
+    if (list.brief && list.brief.length) {
+      html += '<div class="brief">' +
+        '<div class="brief-head"><b>교통 브리핑</b>' + speakButtonHtml('brief') + '</div><ul>' +
+        list.brief.map(function (b) {
+          return '<li><span class="brief-icon" aria-hidden="true">' + b.icon + '</span>' + esc(b.text) + '</li>';
+        }).join('') + '</ul>' +
+        (list.briefNote ? '<p class="brief-note">' + esc(list.briefNote) + '</p>' : '') + '</div>';
+    }
+    html += '<ol class="rec-list dest-list">';
     list.items.forEach(function (it, i) {
       var facts = '';
       if (it.status && STATUS_TEXT[it.status]) facts += '<span class="fact st-' + it.status + '">' + STATUS_TEXT[it.status] + '</span>';
@@ -671,6 +684,135 @@
     }
     body.innerHTML = html;
     markGuideTarget();
+  }
+
+  /* ---------- 8-3. 음성 안내 [팀원1 추가] ---------- */
+  // 브라우저에 들어 있는 음성 합성(Web Speech API)을 쓴다. 지원하지 않는 브라우저에서는 버튼이 안 보인다.
+  var speakingKey = null;
+
+  function canSpeak() {
+    return 'speechSynthesis' in window && typeof window.SpeechSynthesisUtterance !== 'undefined';
+  }
+
+  function speakButtonHtml(key) {
+    if (!canSpeak()) return '';
+    var on = speakingKey === key && window.speechSynthesis.speaking;
+    return '<button type="button" class="speak-btn" data-speak="' + key + '" aria-pressed="' + (on ? 'true' : 'false') + '">' +
+      (on ? '<span aria-hidden="true">⏹</span> 멈춤' : '<span aria-hidden="true">🔊</span> 듣기') + '</button>';
+  }
+
+  function syncSpeakButtons() {
+    Array.prototype.forEach.call(document.querySelectorAll('.speak-btn'), function (b) {
+      var on = speakingKey === b.getAttribute('data-speak') && window.speechSynthesis.speaking;
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      b.innerHTML = on ? '<span aria-hidden="true">⏹</span> 멈춤' : '<span aria-hidden="true">🔊</span> 듣기';
+    });
+  }
+
+  // 읽기 좋게: 괄호·가운뎃점을 쉼표로
+  function speechClean(t) {
+    return String(t).replace(/°/g, '도').replace(/\(/g, ', ').replace(/\)/g, '').replace(/·/g, ', ')
+      .replace(/\s+,/g, ',').replace(/,(\s*,)+/g, ',').replace(/,\s*\./g, '.').replace(/\s+/g, ' ').trim();
+  }
+
+  function routeSpeech(plan) {
+    var who = plan.profiles.length ? plan.profiles.map(function (id) { return PROFILE_LABEL[id]; }).join(', ') : '일반';
+    var guide = plan.dest && plan.dest !== 'all';
+    var parts = [];
+    parts.push(guide ? who + ' 기준으로 ' + (DEST_LABEL[plan.dest] || '목적지') + '까지 길안내를 시작할게요.'
+      : who + ' 기준 추천 동선을 안내할게요.');
+    (plan.weatherNotes || []).forEach(function (n) { parts.push(n); });
+    plan.stops.forEach(function (s) {
+      var nth = ['첫', '두', '세', '네', '다섯', '여섯'][s.step - 1] || String(s.step);
+      parts.push(nth + ' 번째, ' + s.label + '. ' + s.name + '까지 ' + (s.legPath ? '걸어서 ' : '직선으로 ') +
+        s.legM + '미터, 약 ' + s.legMin + '분이에요.');
+    });
+    if (plan.stops.length) parts.push((guide ? '도착까지' : '모두 들르면') + ' 약 ' + plan.totalM + '미터, ' + plan.totalMin + '분 걸려요.');
+    if (plan.stepsAvoided) parts.push('계단 없는 길로 골랐어요.');
+    (plan.pathNotes || []).forEach(function (n) { parts.push(n); });
+    return speechClean(parts.join(' '));
+  }
+
+  function briefSpeech(list) {
+    var parts = ['교통 브리핑이에요.'];
+    (list.brief || []).forEach(function (b) { parts.push(b.text.replace(/(\d[\d,]*)m/g, '$1미터') + '.'); });
+    return speechClean(parts.join(' '));
+  }
+
+  function speak(key, text) {
+    if (!canSpeak() || !text) return;
+    var synth = window.speechSynthesis;
+    if (speakingKey === key && synth.speaking) {   // 읽는 중에 다시 누르면 멈춤
+      synth.cancel();
+      speakingKey = null;
+      syncSpeakButtons();
+      return;
+    }
+    synth.cancel();
+    var u = new window.SpeechSynthesisUtterance(text);
+    u.lang = 'ko-KR';
+    u.rate = 1;
+    var ko = (synth.getVoices() || []).filter(function (v) { return /^ko/i.test(v.lang); })[0];
+    if (ko) u.voice = ko;
+    u.onend = u.onerror = function () {
+      if (speakingKey === key) speakingKey = null;
+      syncSpeakButtons();
+    };
+    speakingKey = key;
+    synth.speak(u);
+    syncSpeakButtons();
+  }
+
+  function handleSpeakClick(event) {
+    var btn = event.target.closest('.speak-btn');
+    if (!btn) return;
+    event.stopPropagation();
+    var key = btn.getAttribute('data-speak');
+    if (key === 'route' && window.routePlan) speak('route', routeSpeech(window.routePlan));
+    if (key === 'brief' && window.destList) speak('brief', briefSpeech(window.destList));
+  }
+
+  /* ---------- 8-4. 어두운 화면 [팀원1 추가] ---------- */
+  function currentTheme() {
+    return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  }
+
+  function syncThemeButton() {
+    var btn = $('[data-role="theme-toggle"]');
+    if (!btn) return;
+    var dark = currentTheme() === 'dark';
+    btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
+    btn.setAttribute('aria-label', dark ? '밝은 화면으로 보기' : '어두운 화면으로 보기');
+    btn.innerHTML = dark ? '<span aria-hidden="true">☀️</span><span class="theme-text">밝게</span>'
+      : '<span aria-hidden="true">🌙</span><span class="theme-text">어둡게</span>';
+  }
+
+  // 주차 그래프(Chart.js) 글자·눈금 색도 테마에 맞춘다
+  function syncChartTheme() {
+    if (typeof window.Chart === 'undefined') return;
+    var dark = currentTheme() === 'dark';
+    window.Chart.defaults.color = dark ? '#c9d6cf' : '#55605a';
+    window.Chart.defaults.borderColor = dark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.1)';
+    var all = window.Chart.instances ? Object.keys(window.Chart.instances).map(function (k) { return window.Chart.instances[k]; }) : [];
+    all.forEach(function (c) {
+      ['x', 'y'].forEach(function (ax) {
+        var sc = c.options.scales && c.options.scales[ax];
+        if (!sc) return;
+        if (sc.ticks) sc.ticks.color = window.Chart.defaults.color;
+        if (sc.title) sc.title.color = window.Chart.defaults.color;
+        if (sc.grid) sc.grid.color = window.Chart.defaults.borderColor;
+      });
+      if (c.options.plugins && c.options.plugins.legend && c.options.plugins.legend.labels) c.options.plugins.legend.labels.color = window.Chart.defaults.color;
+      c.update('none');
+    });
+  }
+
+  function setTheme(theme, save) {
+    document.documentElement.setAttribute('data-theme', theme);
+    if (save) { try { localStorage.setItem('opm-theme', theme); } catch (e) { /* 저장 못 해도 괜찮다 */ } }
+    syncThemeButton();
+    syncChartTheme();
+    send('themechange', { theme: theme });
   }
 
   /* ---------- 8-2. 추천 동선: 들를 곳 순서 [팀원1 추가] ---------- */
@@ -702,8 +844,8 @@
     var guide = plan.dest && plan.dest !== 'all';
     var title = plan.title || '추천 동선';
     var sub = guide ? who + ' · ' + (DEST_LABEL[plan.dest] || '') + '까지' : who + ' · 들를 곳 순서';
-    var html = '<h3 class="recommend-title">' + (guide ? '<span class="title-icon" aria-hidden="true">🧭</span>' : '') +
-      esc(title) + ' <span class="sub">' + esc(sub) + '</span></h3>';
+    var html = '<div class="route-head"><h3 class="recommend-title">' + (guide ? '<span class="title-icon" aria-hidden="true">🧭</span>' : '') +
+      esc(title) + ' <span class="sub">' + esc(sub) + '</span></h3>' + speakButtonHtml('route') + '</div>';
 
     // 날씨 때문에 바꾼 점 (날씨 맞춤 길안내)
     if (plan.weatherNotes && plan.weatherNotes.length) {
@@ -784,6 +926,23 @@
     if (dests) dests.addEventListener('click', handleDestClick);
     var origins = $('.origin-options');                            // [팀원1 추가]
     if (origins) origins.addEventListener('click', handleOriginClick);
+    var recList = document.getElementById('recommend-list');       // [팀원1 추가] 음성 안내 버튼
+    if (recList) recList.addEventListener('click', handleSpeakClick, true);
+    var themeBtn = $('[data-role="theme-toggle"]');                // [팀원1 추가] 어두운 화면
+    if (themeBtn) themeBtn.addEventListener('click', function () { setTheme(currentTheme() === 'dark' ? 'light' : 'dark', true); });
+    syncThemeButton();
+    // 직접 고른 적이 없으면 기기 설정(밝게/어둡게)을 따라간다
+    if (window.matchMedia) {
+      var mq = window.matchMedia('(prefers-color-scheme: dark)');
+      var onChange = function () {
+        var saved = null;
+        try { saved = localStorage.getItem('opm-theme'); } catch (e) { /* 무시 */ }
+        if (!saved) setTheme(mq.matches ? 'dark' : 'light', false);
+      };
+      if (mq.addEventListener) mq.addEventListener('change', onChange);
+    }
+    // 주차 그래프가 그려진 뒤 색 맞추기
+    setTimeout(syncChartTheme, 1500);
 
     var rec = document.getElementById('recommend-list');
     if (rec) rec.addEventListener('click', handleRecommendClick);

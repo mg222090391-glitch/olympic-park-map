@@ -8,6 +8,8 @@
  *  - 채우는 것: window.appState.userLocation, window.recommendations
  *  - 듣는 이벤트 : profilechange, filterchange, conditionready, focusplace, destinationchange(추가), originpick(추가)
  *  - 보내는 이벤트(추가): originchange { key, label, lat, lng } — 기준(출발) 위치가 바뀔 때
+ *  - 듣는 이벤트(추가): themechange { theme: 'light' | 'dark' } — 지도 색을 밝게/어둡게
+ *  - data/transit.json(추가): 지하철역·버스정류장(OpenStreetMap)과 택시 타기 좋은 곳. '역·버스·택시' 목적지와 교통 브리핑에 쓴다
  *  - 보내는 이벤트: recommendready, routeready (실패 시 mapdataerror)
  *  - 채우는 것(추가): window.routePlan — 상황별 '들를 곳 순서'(직선거리 기준). 상황을 안 고르면 null
  *      가고 싶은 곳(appState.destination)을 고르면 그곳까지의 '길안내'가 되고, 날씨에 맞는 경유지가 들어간다.
@@ -35,7 +37,8 @@
 
   // ───────────────────── 1. 설정값 ─────────────────────
   const DATA_URL = 'data/olympic_park_data.json';
-  const WALK_GRAPH_URL = 'data/walk_graph.json';  // 걷는 길 그래프(OpenStreetMap). tools/build_walk_graph.py로 만든다
+  const WALK_GRAPH_URL = 'data/walk_graph.json';
+  const TRANSIT_URL = 'data/transit.json';          // 지하철역·버스정류장·택시 타기 좋은 곳  // 걷는 길 그래프(OpenStreetMap). tools/build_walk_graph.py로 만든다
   const MOCK_URL = 'mock_data.js';             // ?demo 일 때만 불러오는 가상 데이터
   const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
   const FALLBACK_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -79,6 +82,9 @@
     'elevator':          { color: '#6d28d9', emoji: '🛗' },
     'aed':               { color: '#b91c1c', emoji: '❤️' },
     'me':                { color: '#2563eb', emoji: '📍' },
+    'subway':            { color: '#1e5aa8', emoji: '🚇' },
+    'bus':               { color: '#2f9e44', emoji: '🚌' },
+    'taxi':              { color: '#e8a400', emoji: '🚕' },
   };
   const kindColor = (kind) => 'var(--mk-' + kind + ', ' + (KIND_STYLE[kind] || KIND_STYLE.facility).color + ')';
 
@@ -527,6 +533,17 @@ ${kindVars}
     addLayer('aed', 'AED(자동심장충격기)', 'aed', false);
     (data.aed || []).forEach((a) => count(addEntry('aed', 'aed', 'aed', a, 'AED ' + (a.name || ''))));
 
+    // 교통: 지하철역(보임), 버스정류장·택시 타기 좋은 곳(처음엔 숨김 → '역·버스·택시'를 고르면 보임)
+    const tr = data.transit;
+    if (tr) {
+      addLayer('subway', '지하철역', 'subway', true);
+      (tr.stations || []).forEach((s) => { s.ttype = 'subway'; count(addEntry('subway', 'transit', 'subway', s, s.name + '역')); });
+      addLayer('bus', '버스정류장', 'bus', false);
+      (tr.bus_stops || []).forEach((b) => { b.ttype = 'bus'; count(addEntry('bus', 'transit', 'bus', b, b.name + ' 정류장')); });
+      addLayer('taxi', '택시 타기 좋은 곳', 'taxi', false);
+      (tr.taxi || []).forEach((t) => { t.ttype = 'taxi'; count(addEntry('taxi', 'transit', 'taxi', t, '택시 · ' + t.name)); });
+    }
+
     if (skipped) console.warn('[map.js] 좌표가 없거나 잘못된 항목 ' + skipped + '개는 지도에서 뺐어요.');
 
     S.map.addControl(new LayerControl(), 'top-left');
@@ -872,6 +889,21 @@ ${kindVars}
         h += headHtml('aed', '자동심장충격기(AED)', it.name || 'AED');
         h += rowsHtml([['설치기관', it.name], ['설치위치', it.detail], ['거리', distanceText(it)]]);
         break;
+      case 'transit':
+        if (entry.kind === 'subway') {
+          h += headHtml('subway', '지하철역 · ' + (it.lines || []).join('·'), it.name + '역');
+          h += rowsHtml([['출구', (it.exits || []).length ? it.exits.join(', ') + '번' : null],
+            ['엘리베이터', stationElevatorText(it)], ['거리', distanceText(it)]]);
+        } else if (entry.kind === 'bus') {
+          h += headHtml('bus', '버스정류장', it.name);
+          h += rowsHtml([['버스', (it.routes || []).length ? it.routes.join(', ') : '노선 정보 없음'], ['거리', distanceText(it)]]);
+          h += noteHtml('버스 노선은 OpenStreetMap 기준이라 빠진 노선이 있을 수 있어요.');
+        } else {
+          h += headHtml('taxi', '택시 타기 좋은 곳', it.name);
+          h += rowsHtml([['도로', it.road], ['이유', it.why], ['거리', distanceText(it)]]);
+          h += noteHtml('공식 택시 승강장이 아니라, 큰길과 바로 이어지는 출입구를 추천한 곳이에요.');
+        }
+        break;
       default: // facility
         h += headHtml('facility', '편의시설 · ' + (it.type || '기타'), it.place || it.type);
         h += rowsHtml([['상세 위치', it.detail], ['비고', it.note], ['거리', distanceText(it)]]);
@@ -1102,6 +1134,11 @@ ${kindVars}
   function entryName(e) {
     if (e.cat === 'elevator') return (e.item.station || '지하철역') + ' 엘리베이터';
     if (e.cat === 'facility') return e.item.place || e.item.type || '편의시설';
+    if (e.cat === 'transit') {
+      if (e.kind === 'subway') return e.item.name + '역';
+      if (e.kind === 'bus') return e.item.name + ' 정류장';
+      return e.item.name;
+    }
     return e.item.name || e.title || '';
   }
 
@@ -1209,6 +1246,153 @@ ${kindVars}
       stepsAvoided: avoid && !stepsUsed,
     };
   }
+
+  // ───────────────────── 10-5. 교통 브리핑: 가까운 역·버스·택시 [팀원1 추가] ─────────────────────
+  // 종류마다 가까운 곳 2개씩(버스는 같은 이름 정류장은 하나만) 골라 가까운 순으로 보여 주고,
+  // 맨 위에 '가장 가까운 역/버스/택시'를 걸어서 몇 분인지 한 줄씩 요약한다(걷는 길 그래프가 있으면 걷는 길 기준).
+  function computeTransitList(st) {
+    const o = S.origin;
+    const pick = (kind, n) => {
+      const seen = new Set();
+      return S.entries.filter((e) => e.cat === 'transit' && e.kind === kind)
+        .map((e) => ({ e: e, m: haversine(o.lat, o.lng, e.item.lat, e.item.lng) }))
+        .sort((a, b) => a.m - b.m)
+        .filter((r) => { const k = r.e.item.name; if (seen.has(k)) return false; seen.add(k); return true; })
+        .slice(0, n);
+    };
+    const groups = { subway: pick('subway', 2), bus: pick('bus', 2), taxi: pick('taxi', 2) };
+    const rows = groups.subway.concat(groups.bus, groups.taxi).sort((a, b) => a.m - b.m);
+    S.destEntries = rows.map((r) => r.e);
+    const walkText = (r) => {
+      const leg = walkLeg(o, r.e.item, st.profiles);
+      const m = leg ? leg.meters : r.m;
+      return (leg ? '걸어서 ' : '직선 ') + Math.round(m).toLocaleString() + 'm · 약 ' + Math.max(1, Math.round(m / walkSpeed(st.profiles))) + '분';
+    };
+    const brief = [];
+    if (groups.subway[0]) {
+      const s = groups.subway[0].e.item;
+      brief.push({ icon: '🚇', kind: 'subway', lat: s.lat, lng: s.lng,
+        text: '가장 가까운 역: ' + s.name + '역(' + (s.lines || []).join('·') + ') · ' + walkText(groups.subway[0]) +
+          (/있음/.test(stationElevatorText(s)) ? ' · 엘리베이터 있음' : '') });
+    }
+    if (groups.bus[0]) {
+      const b = groups.bus[0].e.item;
+      brief.push({ icon: '🚌', kind: 'bus', lat: b.lat, lng: b.lng,
+        text: '버스: ' + b.name + ' 정류장 · ' + walkText(groups.bus[0]) +
+          ((b.routes || []).length ? ' · ' + b.routes.slice(0, 5).join(', ') + '번' : '') });
+    }
+    if (groups.taxi[0]) {
+      const t = groups.taxi[0].e.item;
+      brief.push({ icon: '🚕', kind: 'taxi', lat: t.lat, lng: t.lng,
+        text: '택시: ' + t.name + '(' + t.road + ') · ' + walkText(groups.taxi[0]) });
+    }
+    return {
+      dest: 'transit',
+      label: DESTS.transit.label,
+      total: rows.length,
+      brief: brief,
+      briefNote: '버스 노선은 OpenStreetMap 기준이고, 택시는 공식 승강장이 아니라 큰길과 이어지는 출입구를 추천한 곳이에요.',
+      items: rows.map((r) => ({
+        name: entryName(r.e),
+        lat: r.e.item.lat,
+        lng: r.e.item.lng,
+        meters: Math.round(r.m),
+        walkMin: Math.max(1, Math.round(walkMinutes(r.m, st.profiles))),
+        status: null,
+        facts: destFacts(r.e, new Date()),
+      })),
+    };
+  }
+
+  // ───────────────────── 12-2. 지도 색 테마: 밝게 / 어둡게 [팀원1 추가] ─────────────────────
+  // OpenFreeMap(liberty) 층 이름에 맞춰 색을 바꾼다. 처음 바꾸기 전 원래 값을 기억해 두고, 밝은 테마에서 쓸 값이 없으면 원래 값으로 되돌린다.
+  // [층 이름 규칙, 속성, 밝은 값, 어두운 값]
+  const MAP_THEME_RULES = [
+    [/^background$/, 'background-color', '#f4f1ea', '#121a16'],
+    [/^park$/, 'fill-color', '#cfe7c1', '#1b2e22'],
+    [/^park_outline$/, 'line-color', '#b9dba6', '#24402e'],
+    [/^landcover_grass$/, 'fill-color', '#c2e2ab', '#1d3324'],
+    [/^landcover_wood$/, 'fill-color', '#a9d690', '#1a3322'],
+    [/^landuse_residential$/, 'fill-color', null, '#191f1c'],
+    [/^landuse_(pitch|track|school|cemetery|hospital)$/, 'fill-color', null, '#1e2622'],
+    [/^water$/, 'fill-color', '#a7d0f7', '#173450'],
+    [/^waterway_/, 'line-color', '#93c3f0', '#1f4a70'],
+    [/^(road|bridge|tunnel)_(minor|service_track|street)$/, 'line-color', '#ffffff', '#2b3530'],
+    [/^(road|bridge|tunnel)_(minor|service_track|street)_casing$/, 'line-color', '#ded7cc', '#1a201d'],
+    [/^(road|bridge|tunnel)_(secondary_tertiary|trunk_primary|link)$/, 'line-color', '#ffefc7', '#4a4330'],
+    [/^(road|bridge|tunnel)_(secondary_tertiary|trunk_primary|link|motorway|motorway_link)_casing$/, 'line-color', '#efcf98', '#2a261b'],
+    [/^(road|bridge|tunnel)_(motorway|motorway_link)$/, 'line-color', '#ffd9a0', '#5a4a2c'],
+    [/^(road|bridge|tunnel)_path_pedestrian$/, 'line-color', '#fffbf2', '#3b4b42'],
+    [/^bridge_path_pedestrian_casing$/, 'line-color', null, '#1a201d'],
+    [/^(road|bridge|tunnel)_(major|transit)_rail(_hatching)?$/, 'line-color', null, '#4b524e'],
+    [/^building$/, 'fill-color', null, '#232a26'],
+    [/^road_area_pattern$/, 'fill-opacity', null, 0.12],
+    [/^highway-shield/, 'icon-opacity', null, 0.55],
+  ];
+
+  function rememberPaint(id, prop) {
+    S.origPaint = S.origPaint || {};
+    const k = id + '|' + prop;
+    if (!(k in S.origPaint)) {
+      try { S.origPaint[k] = S.map.getPaintProperty(id, prop); } catch (e) { S.origPaint[k] = undefined; }
+    }
+    return S.origPaint[k];
+  }
+
+  function setPaint(id, prop, value) {
+    const orig = rememberPaint(id, prop);
+    const v = value === null ? orig : value;
+    // 원래 값이 없던 속성은 null로 되돌린다(기본값)
+    try { S.map.setPaintProperty(id, prop, v === undefined ? null : v); } catch (e) { /* 그 속성이 없는 층은 건너뛴다 */ }
+  }
+
+  function applyMapTheme(dark) {
+    if (!S.map || !S.map.getStyle()) return;
+    S.dark = !!dark;
+    const layers = S.map.getStyle().layers || [];
+    const hasOMT = !!(S.map.getStyle().sources || {}).openmaptiles;
+    if (!hasOMT) {
+      // 대체 2D 타일(래스터)일 때는 밝기만 낮춘다
+      layers.filter((l) => l.type === 'raster').forEach((l) => {
+        setPaint(l.id, 'raster-brightness-max', dark ? 0.62 : 1);
+        setPaint(l.id, 'raster-saturation', dark ? -0.35 : 0);
+      });
+    } else {
+      layers.forEach((l) => {
+        MAP_THEME_RULES.forEach(([re, prop, light, darkV]) => {
+          if (re.test(l.id)) setPaint(l.id, prop, dark ? darkV : light);
+        });
+        // 자잘한 가게 이름은 숨겨서 지도를 덜 복잡하게(우리 시설 핀이 잘 보이게)
+        if (/^poi_r(7|20)$/.test(l.id)) { try { S.map.setLayoutProperty(l.id, 'visibility', 'none'); } catch (e) { /* 무시 */ } }
+        if (l.type === 'symbol') {
+          setPaint(l.id, 'text-color', dark ? '#cfe0d6' : null);
+          setPaint(l.id, 'text-halo-color', dark ? 'rgba(10, 16, 13, 0.92)' : null);
+        }
+      });
+      (S.extrusionLayers || []).forEach((id) => {
+        setPaint(id, 'fill-extrusion-color', dark
+          ? ['interpolate', ['linear'], ['coalesce', ['get', 'render_height'], 8], 0, '#29312d', 40, '#323b36', 150, '#3d4742']
+          : ['interpolate', ['linear'], ['coalesce', ['get', 'render_height'], 8], 0, '#ece7df', 20, '#e2dbd0', 60, '#d3cabd', 150, '#c4b9aa']);
+        setPaint(id, 'fill-extrusion-opacity', dark ? 0.88 : 0.92);
+      });
+      ['op-park-fill'].forEach((id) => { if (S.map.getLayer(id)) setPaint(id, 'fill-opacity', dark ? 0.12 : 0.07); });
+      ['op-park-line'].forEach((id) => { if (S.map.getLayer(id)) setPaint(id, 'line-color', dark ? '#2f9e5b' : '#16a34a'); });
+    }
+    if (S.map.getLayer('op-route-casing')) setPaint('op-route-casing', 'line-color', dark ? '#0f1512' : '#ffffff');
+    if (S.map.getLayer('op-rec-casing')) setPaint('op-rec-casing', 'line-color', dark ? '#0f1512' : '#ffffff');
+    try {
+      S.map.setLight({ anchor: 'viewport', color: '#ffffff', intensity: dark ? 0.22 : 0.38, position: [1.4, 210, 35] });
+      S.map.setSky(dark ? {
+        'sky-color': '#0b1622', 'horizon-color': '#1b2b3a', 'fog-color': '#121a16',
+        'sky-horizon-blend': 0.6, 'horizon-fog-blend': 0.7, 'fog-ground-blend': 0.85, 'atmosphere-blend': 0.4,
+      } : {
+        'sky-color': '#9fd0ff', 'horizon-color': '#e6f2ff', 'fog-color': '#eef3f7',
+        'sky-horizon-blend': 0.6, 'horizon-fog-blend': 0.7, 'fog-ground-blend': 0.85, 'atmosphere-blend': 0.6,
+      });
+    } catch (e) { /* 하늘 표현을 못 하는 환경이면 건너뛴다 */ }
+  }
+
+  function isDarkTheme() { return document.documentElement.getAttribute('data-theme') === 'dark'; }
 
   // ───────────────────── 10-4. 걷는 길 따라 길찾기 [팀원1 추가] ─────────────────────
   // data/walk_graph.json: OpenStreetMap의 보도·산책로·계단·다리를 점(n)과 선(e)으로 만든 그래프.
@@ -1389,7 +1573,17 @@ ${kindVars}
     charger: { label: '전동휠체어 충전기', match: (e) => e.cat === 'charger' },
     elevator: { label: '지하철 엘리베이터', match: (e) => e.cat === 'elevator' },
     aed: { label: 'AED(자동심장충격기)', match: (e) => e.cat === 'aed' },
+    transit: { label: '역·버스·택시', match: (e) => e.cat === 'transit' },
   };
+
+  const TRANSIT_TYPE_LABEL = { subway: '지하철역', bus: '버스정류장', taxi: '택시 타기 좋은 곳' };
+
+  // 지하철역 근처(300m)에 엘리베이터 데이터가 있는지
+  function stationElevatorText(st) {
+    const els = (S.data.subway_elevators || []).filter((e) => validPoint(e) &&
+      String(e.station || '').indexOf(st.name) > -1 && haversine(st.lat, st.lng, Number(e.lat), Number(e.lng)) < 300);
+    return els.length ? '있음 (' + els.length + '곳)' : '데이터 없음';
+  }
 
   // 한파쉼터 중 '특정인'(회원만) 이용하는 곳
   function membersOnly(e) { return e.cat === 'cold' && /특정/.test(String(e.item.who || '')); }
@@ -1414,6 +1608,10 @@ ${kindVars}
     if (!layer || !layer.visible) return false;
     const d = currentDest();
     if (d === 'all') return true;
+    if (d === 'transit') {
+      // 버스정류장이 많아서, 브리핑에 든 곳·길안내 경유지·지하철역만 보여 준다
+      return (S.destEntries || []).includes(e) || (S.routeEntries || []).includes(e) || e.kind === 'subway';
+    }
     return DESTS[d].match(e) || (S.routeEntries || []).includes(e);
   }
 
@@ -1475,6 +1673,20 @@ ${kindVars}
       case 'aed':
         add(it.detail);
         break;
+      case 'transit':
+        if (e.kind === 'subway') {
+          add('🚇 ' + (it.lines || []).join('·'));
+          if (/있음/.test(stationElevatorText(it))) add('엘리베이터 있음');
+          if ((it.exits || []).length) add('출구 ' + it.exits.join(',') + '번');
+        } else if (e.kind === 'bus') {
+          add('🚌 버스정류장');
+          add((it.routes || []).length ? it.routes.slice(0, 6).join(', ') + (it.routes.length > 6 ? ' 외' : '') : '노선 정보 없음');
+        } else {
+          add('🚕 택시 타기 좋은 곳');
+          add(it.road);
+          add(it.why);
+        }
+        break;
       default:
         add(it.type);
         add(it.detail);
@@ -1495,6 +1707,7 @@ ${kindVars}
       S.destEntries = S.entries.filter((e) => e.cat === 'toilet' && keys.has(e.item.lat + ',' + e.item.lng));
       return { dest: d, label: DESTS[d].label, items: null };  // 목록은 ui.js가 window.recommendations로 그린다
     }
+    if (d === 'transit') return computeTransitList(st);
     const rows = S.entries.filter((e) => DESTS[d].match(e)).map((e) => {
       const m = haversine(S.origin.lat, S.origin.lng, e.item.lat, e.item.lng);
       return { e: e, m: m, status: entryOpenStatus(e, now) };
@@ -1622,7 +1835,7 @@ ${kindVars}
     }
     if (!target) target = pool.find((e) => entryOpenStatus(e, now) !== false && !membersOnly(e)) ||
       pool.find((e) => entryOpenStatus(e, now) !== false) || null;
-    const label = d === 'toilet' ? toiletNeedLabel(profiles) : DESTS[d].label;
+    const label = d === 'toilet' ? toiletNeedLabel(profiles) : d === 'transit' ? TRANSIT_TYPE_LABEL[target ? target.kind : 'subway'] : DESTS[d].label;
     const wx = weatherRouteInfo(profiles, now);
     if (!target) {
       return buildPlan([], {
@@ -1835,13 +2048,17 @@ ${kindVars}
     S.map.addLayer({ id: 'op-rec-line', type: 'line', source: 'op-rec', layout: { 'line-cap': 'round' },
       paint: { 'line-color': ['match', ['get', 'rank'], 1, '#2563eb', 2, '#3b82f6', '#60a5fa'],
         'line-width': ['-', 5.5, ['*', 1, ['get', 'rank']]], 'line-dasharray': [1.2, 1.4] } }, before);
-    // 추천 동선(들를 곳 순서) — 직선
-    S.map.addSource('op-route', { type: 'geojson', data: emptyFC() });
+    // 추천 동선·길안내 선: 은은한 빛 + 흰 테두리 + 출발(파랑)→도착(분홍) 색이 이어지는 선
+    S.map.addSource('op-route', { type: 'geojson', data: emptyFC(), lineMetrics: true });
+    S.map.addLayer({ id: 'op-route-glow', type: 'line', source: 'op-route', layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': ROUTE_COLOR, 'line-width': ['interpolate', ['linear'], ['zoom'], 14, 10, 18, 18], 'line-opacity': 0.18, 'line-blur': 6 } }, before);
     S.map.addLayer({ id: 'op-route-casing', type: 'line', source: 'op-route', layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': '#ffffff', 'line-width': 8, 'line-opacity': 0.9 } }, before);
+      paint: { 'line-color': '#ffffff', 'line-width': ['interpolate', ['linear'], ['zoom'], 14, 6, 18, 11], 'line-opacity': 0.95 } }, before);
     S.map.addLayer({ id: 'op-route-line', type: 'line', source: 'op-route', layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': ROUTE_COLOR, 'line-width': 4.5, 'line-dasharray': [1.6, 1.2] } }, before);
+      paint: { 'line-width': ['interpolate', ['linear'], ['zoom'], 14, 3.5, 18, 6.5],
+        'line-gradient': ['interpolate', ['linear'], ['line-progress'], 0, '#2563eb', 0.5, '#9333ea', 1, ROUTE_COLOR] } }, before);
     S.overlayReady = true;
+    applyMapTheme(isDarkTheme());
   }
 
   function updateOverlays() {
@@ -1995,7 +2212,12 @@ ${kindVars}
     }
     const res = await fetch(DATA_URL, { cache: 'no-cache' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    return res.json();
+    const d = await res.json();
+    // 교통 데이터는 없어도 지도는 동작한다
+    d.transit = await fetch(TRANSIT_URL, { cache: 'no-cache' })
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null);
+    return d;
   }
 
   function fallbackStyle() {
@@ -2046,6 +2268,7 @@ ${kindVars}
     document.addEventListener('conditionready', () => { if (S.data && S.origin) recompute(); });
     document.addEventListener('destinationchange', () => { if (S.data && S.origin) onDestinationChange(); });
     document.addEventListener('originpick', (e) => { const d = (e && e.detail) || {}; if (S.data && S.origin) pickOrigin(d.key); });
+    document.addEventListener('themechange', (e) => { const d = (e && e.detail) || {}; if (S.overlayReady) applyMapTheme(d.theme === 'dark'); });
     document.addEventListener('focusplace', (e) => { const d = (e && e.detail) || {}; if (S.data) onFocusPlace(d.lat, d.lng); });
 
     const dataPromise = loadData().then((d) => ({ ok: true, d: d }), (err) => ({ ok: false, err: err }));

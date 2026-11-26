@@ -11,6 +11,16 @@
   <!-- 글꼴: Pretendard (못 불러오면 기기 기본 글꼴로 보임) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
   <meta name="theme-color" content="#0f4a33">
+  <meta name="color-scheme" content="light dark">
+  <!-- 어두운 화면: 화면이 그려지기 전에 정해 둔다(깜빡임 방지). 직접 고른 값 → 기기 설정 순서 -->
+  <script>
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem('opm-theme'); } catch (e) {}
+      if (t !== 'dark' && t !== 'light') t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
   <!-- 우리 서비스 모양 파일 (팀원3) -->
   <link rel="stylesheet" href="style.css">
 </head>
@@ -30,6 +40,7 @@
           <p class="site-tagline">화장실 · 쉼터 · 충전기 · 엘리베이터 · AED를 내 상황에 맞게</p>
         </div>
       </div>
+      <button type="button" class="theme-toggle" data-role="theme-toggle" aria-pressed="false" aria-label="어두운 화면으로 보기"><span aria-hidden="true">🌙</span><span class="theme-text">어둡게</span></button>
       <ol class="how-to">
         <li><span class="how-num" aria-hidden="true">1</span><span><b>내 상황</b>을 고르거나 문장으로 적어 주세요.</span></li>
         <li><span class="how-num" aria-hidden="true">2</span><span><b>가고 싶은 곳</b>을 고르세요.</span></li>
@@ -112,6 +123,7 @@
         <button type="button" class="dest-btn" data-dest="charger" aria-pressed="false"><span class="dest-icon" aria-hidden="true">🔌</span><span class="dest-text">휠체어 충전</span></button>
         <button type="button" class="dest-btn" data-dest="elevator" aria-pressed="false"><span class="dest-icon" aria-hidden="true">🛗</span><span class="dest-text">지하철 엘리베이터</span></button>
         <button type="button" class="dest-btn" data-dest="aed" aria-pressed="false"><span class="dest-icon" aria-hidden="true">💓</span><span class="dest-text">AED</span></button>
+        <button type="button" class="dest-btn dest-wide" data-dest="transit" aria-pressed="false"><span class="dest-icon" aria-hidden="true">🚉</span><span class="dest-text">역·버스·택시 <small>교통 브리핑</small></span></button>
       </div>
       <p class="hint">내 상황에 맞는 곳에는 <b>추천</b> 표시가 붙어요. 고르면 지도와 목록에 그곳만 남고, 날씨에 맞춰 길안내해요.</p>
     </section>
@@ -171,6 +183,9 @@
           <li><span class="mk mk-charger" aria-hidden="true"></span> 전동휠체어 충전기</li>
           <li><span class="mk mk-elevator" aria-hidden="true"></span> 지하철 엘리베이터</li>
           <li><span class="mk mk-aed" aria-hidden="true"></span> 자동심장충격기(AED)</li>
+          <li><span class="mk mk-subway" aria-hidden="true"></span> 지하철역</li>
+          <li><span class="mk mk-bus" aria-hidden="true"></span> 버스정류장</li>
+          <li><span class="mk mk-taxi" aria-hidden="true"></span> 택시 타기 좋은 곳</li>
           <li><span class="mk mk-me" aria-hidden="true"></span> 기준 위치(나)</li>
         </ul>
       </details>
@@ -224,6 +239,7 @@
         <li>칸 수 정보가 없는 화장실 9곳은 지도에는 보이지만 추천에서는 빠져요.</li>
         <li>주차장 전체 면수가 없어서 점유율(%)은 계산할 수 없어요.</li>
         <li>‘공원 경계까지 거리’는 KSPO 편의시설 지점 중 가장 가까운 지점까지의 거리로 계산했어요.</li>
+        <li>지하철역·버스정류장·버스 노선은 OpenStreetMap 데이터라 빠지거나 바뀐 곳이 있을 수 있어요. ‘택시 타기 좋은 곳’은 공식 승강장이 아니라 큰길과 이어지는 출입구를 추천한 곳이에요.</li>
         <li>길안내 선과 거리는 OpenStreetMap의 보도·산책로·다리 데이터로 계산했어요. 경사·공사·통제 구간은 반영되지 않고, 추천 목록의 도보 시간은 직선거리 기준이에요.</li>
       </ul>
     </section>

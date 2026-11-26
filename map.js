@@ -16,7 +16,7 @@
  *      가고 싶은 곳(appState.destination)을 고르면 그곳까지의 '길안내'가 되고, 날씨에 맞는 경유지가 들어간다.
  *  - 채우는 것(추가): window.destList — 가고 싶은 곳이 화장실이 아닐 때 가까운 시설 목록(필요한 정보만)
  *  - 마커 : <div class="mk mk-종류"> (종류: toilet, toilet-accessible, facility, heat, cold, charger, elevator, aed, me,
- *          subway, bus, taxi, er(응급실), health(보건소), pharmacy(약국))
+ *          subway, bus, taxi, er(응급실), health(보건소), pharmacy(약국), clinic(병원·의원·치과·한의원))
  *      강조 'mk-highlight', 흐림 'mk-dim' (팀원3 style.css 약속). 아이콘 모양은 style.css의 .mk-종류::before가 그린다.
  *      3D 핀 모양을 위해 바깥에 .mk-wrap(기둥·그림자)을 한 겹 더 씌웠다. 이 겉 칸은 팀원3이 꾸밀 필요 없다.
  *  - #map 상태 클래스: 불러오는 중 'is-loading', 실패 'is-error'
@@ -144,6 +144,7 @@
     'er':                { color: '#9f1239', emoji: '🏥' },
     'health':            { color: '#4338ca', emoji: '🩺' },
     'pharmacy':          { color: '#047857', emoji: '💊' },
+    'clinic':            { color: '#0e7490', emoji: '🏥' },
   };
   const kindColor = (kind) => 'var(--mk-' + kind + ', ' + (KIND_STYLE[kind] || KIND_STYLE.facility).color + ')';
 
@@ -752,12 +753,23 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
     // 병원·약국 [팀원1 추가]: 처음엔 숨김 → '병원·약국'을 고르면 보임
     const md = data.medical;
     if (md) {
+      // 같은 건물(같은 좌표)에 병원·약국이 여럿이면 목록·길안내가 '위도,경도'로 곳을 찾으므로 아주 조금(약 0.2m씩) 떼어 놓는다
+      const seenPt = new Map();
+      ['emergency_rooms', 'health_centers', 'pharmacies', 'clinics'].forEach((k) => (md[k] || []).forEach((h) => {
+        if (!validPoint(h)) return;
+        const key = Number(h.lat) + ',' + Number(h.lng);
+        const n = seenPt.get(key) || 0;
+        seenPt.set(key, n + 1);
+        if (n) h.lng = Math.round((Number(h.lng) + n * 0.000002) * 1e7) / 1e7;
+      }));
       addLayer('er', '응급실', 'er', false);
       (md.emergency_rooms || []).forEach((h) => count(addEntry('er', 'medical', 'er', h, '응급실 · ' + h.name)));
       addLayer('health', '보건소', 'health', false);
       (md.health_centers || []).forEach((h) => count(addEntry('health', 'medical', 'health', h, h.name)));
       addLayer('pharmacy', '약국', 'pharmacy', false);
       (md.pharmacies || []).forEach((h) => count(addEntry('pharmacy', 'medical', 'pharmacy', h, '약국 · ' + h.name)));
+      addLayer('clinic', '병원·의원', 'clinic', false);
+      (md.clinics || []).forEach((h) => count(addEntry('clinic', 'medical', 'clinic', h, (h.type || '병원') + ' · ' + h.name)));
     }
 
     if (skipped) console.warn('[map.js] 좌표가 없거나 잘못된 항목 ' + skipped + '개는 지도에서 뺐어요.');
@@ -1254,14 +1266,15 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
           h += rowsHtml([['거리', distanceText(it)], ['비고', it.note]]);
           h += noteHtml('위급하면 걸어가지 말고 119에 전화하세요. 응급실 사정(병상·진료과)은 그때그때 달라요.');
         } else {
-          const what = entry.kind === 'health' ? '보건소' : '약국';
+          const what = entry.kind === 'health' ? '보건소' : entry.kind === 'clinic' ? (it.type || '병원·의원') : '약국';
           h += headHtml(entry.kind, what, it.name);
-          h += stateHtml(st, '지금 문 열었어요', '지금 문 닫았어요', '운영시간 확인 필요');
-          h += rowsHtml([['오늘', medTodayText(entry, now).replace(/^오늘/, '')], ['운영시간', medWeekText(it)], ['주소', it.addr]]) +
+          h += stateHtml(st, entry.kind === 'clinic' ? '지금 진료 시간이에요' : '지금 문 열었어요', entry.kind === 'clinic' ? '지금 진료 시간이 아니에요' : '지금 문 닫았어요', '운영시간 확인 필요');
+          h += rowsHtml([['진료과목', (it.depts || []).join(', ')], ['오늘', medTodayText(entry, now).replace(/^오늘/, '')], ['운영시간', medWeekText(it)], ['주소', it.addr]]) +
             telRowHtml(it.tel, '전화');
           h += rowsHtml([['거리', distanceText(it)], ['비고', it.note]]);
           h += noteHtml('운영시간은 바뀔 수 있어요. 공휴일은 반영하지 않았으니 전화로 확인하세요.' +
-            (entry.kind === 'health' ? ' 보건소는 진료·접종 업무가 정해져 있어요.' : ''));
+            (entry.kind === 'health' ? ' 보건소는 진료·접종 업무가 정해져 있어요.' : '') +
+            (entry.kind === 'clinic' ? ' 진료과목은 병원이 등록한 과목이라, 그 과 전문의가 있는지는 전화로 확인하세요.' : ''));
         }
         h += '<p class="pop-row pop-src">출처: 국립중앙의료원 E-GEN</p>';
         break;
@@ -1717,7 +1730,25 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
   // ───────────────────── 10-5-2. 병원·약국: 가까운 약국·보건소·응급실 [팀원1 추가] ─────────────────────
   // 목록: 약국 3곳(지금 연 곳 먼저) + 보건소 1곳 + 응급실 2곳을 가까운 순(문 닫은 곳은 뒤로).
   // 맨 위 '의료 브리핑'에 지금 연 약국 · 보건소 · 응급실을 한 줄씩 요약한다.
-  const MEDICAL_PICK = { pharmacy: 3, health: 1, er: 2 };
+  const MEDICAL_PICK = { pharmacy: 3, clinic: 3, health: 1, er: 2 };
+  const MEDICAL_SEARCH_MAX = 30;          // 이름·진료과로 찾을 때 목록에 보여 줄 최대 수
+  // 사람들이 흔히 부르는 이름 → 데이터의 진료과 이름
+  const DEPT_ALIAS = {
+    '소아과': '소아청소년과', '아이': '소아청소년과', '어린이': '소아청소년과', '비뇨기과': '비뇨의학과', '정신과': '정신건강의학과',
+    '흉부외과': '심장혈관흉부외과', '통증': '마취통증의학과', '이빨': '치과', '잇몸': '치과', '한방': '한의원', '침': '한의원',
+    '눈': '안과', '귀': '이비인후과', '코': '이비인후과', '목': '이비인후과', '피부': '피부과', '뼈': '정형외과', '관절': '정형외과',
+    '허리': '정형외과', '임신': '산부인과', '여성': '산부인과', '감기': '내과', '배': '내과', '응급': '응급실',
+  };
+
+  function normQ(v) { return String(v || '').replace(/\s+/g, '').toLowerCase(); }
+
+  // 검색어에 맞는지: 이름·종류(의원/치과의원/한의원…)·진료과목·'약국/보건소/응급실'
+  function medicalMatches(e, q) {
+    const it = e.item;
+    const hay = normQ([it.name, it.type, MEDICAL_TYPE_LABEL[e.kind], (it.depts || []).join(' '), e.kind === 'er' ? '응급실 응급 병원' : ''].join(' '));
+    const alias = DEPT_ALIAS[q];   // 흔히 부르는 이름이면 진료과 이름으로 바꿔 찾는다
+    return hay.indexOf(alias ? normQ(alias) : q) > -1;
+  }
 
   // 지금 열려 있으면 언제 닫는지(분). 모르면 null
   function medCloseMin(e, now) {
@@ -1739,9 +1770,26 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
     const pick = (kind, n) => all.filter((r) => r.e.kind === kind)
       .sort((a, b) => (a.status === false) - (b.status === false) || a.m - b.m)
       .slice(0, n);
-    const groups = { pharmacy: pick('pharmacy', MEDICAL_PICK.pharmacy), health: pick('health', MEDICAL_PICK.health), er: pick('er', MEDICAL_PICK.er) };
-    const rows = groups.pharmacy.concat(groups.health, groups.er)
-      .sort((a, b) => (a.status === false) - (b.status === false) || a.m - b.m);
+    const groups = { pharmacy: pick('pharmacy', MEDICAL_PICK.pharmacy), clinic: pick('clinic', MEDICAL_PICK.clinic),
+      health: pick('health', MEDICAL_PICK.health), er: pick('er', MEDICAL_PICK.er) };
+    const query = normQ(st.medicalQuery);
+    let rows;
+    let matched = 0;
+    if (query) {
+      // 병원 이름·진료과로 찾기: 맞는 곳을 모두 가까운 순으로(지금 문 닫은 곳은 뒤로)
+      // 이름에 진료과가 들어간 곳(예: '○○소아청소년과의원')을 먼저 — 여러 과를 함께 등록한 의원보다 그 과 전문일 가능성이 높다
+      const target = DEPT_ALIAS[query] ? normQ(DEPT_ALIAS[query]) : query;
+      const stem = target.replace(/(청소년)?과$/, '');
+      const nameKey = stem.length >= 2 ? stem : target;
+      const named = (r) => (normQ(r.e.item.name).indexOf(nameKey) > -1 ? 0 : 1);
+      const hit = all.filter((r) => medicalMatches(r.e, query))
+        .sort((a, b) => (a.status === false) - (b.status === false) || named(a) - named(b) || a.m - b.m);
+      matched = hit.length;
+      rows = hit.slice(0, MEDICAL_SEARCH_MAX);
+    } else {
+      rows = groups.pharmacy.concat(groups.clinic, groups.health, groups.er)
+        .sort((a, b) => (a.status === false) - (b.status === false) || a.m - b.m);
+    }
     // 응급 화면·지도에서 직접 고른 곳이 목록 밖이면 끝에 붙인다
     if (S.destTarget && !rows.some((r) => r.e.item.lat + ',' + r.e.item.lng === S.destTarget)) {
       const extra = all.find((r) => r.e.item.lat + ',' + r.e.item.lng === S.destTarget);
@@ -1763,6 +1811,14 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
           text: '근처 약국이 지금 모두 닫았어요. 가장 가까운 곳: ' + it.name + ' · ' + distText(ph) + ' · ' + medTodayText(ph.e, now) });
       }
     }
+    const cl = groups.clinic[0];
+    if (cl) {
+      const it = cl.e.item;
+      const c = cl.status === true ? medCloseMin(cl.e, now) : null;
+      brief.push({ icon: '🏥', kind: 'clinic', lat: it.lat, lng: it.lng,
+        text: (cl.status === true ? '지금 진료 중인 병원·의원: ' : '근처 병원·의원이 지금 모두 진료 시간이 아니에요. 가장 가까운 곳: ') + it.name +
+          '(' + (it.type || '의원') + ') · ' + distText(cl) + (c !== null ? ' · ' + minText(c) + '까지' : ' · ' + medTodayText(cl.e, now)) });
+    }
     const hc = groups.health[0];
     if (hc) {
       const it = hc.e.item;
@@ -1773,15 +1829,18 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
     const er = groups.er.slice().sort((a, b) => a.m - b.m)[0];
     if (er) {
       const it = er.e.item;
-      brief.push({ icon: '🏥', kind: 'er', lat: it.lat, lng: it.lng, tel: it.tel,
+      brief.push({ icon: '🚑', kind: 'er', lat: it.lat, lng: it.lng, tel: it.tel,
         text: '응급실: ' + it.name + '(' + it.level + ') · ' + distText(er) + ' · 24시간 · ' + it.tel });
     }
     return {
       dest: 'medical',
       label: DESTS.medical.label,
-      total: rows.length,           // 약국은 목록에 든 곳만 지도에 보이므로 '나머지는 지도에서' 안내를 띄우지 않는다
+      total: rows.length,           // 약국·병원은 목록에 든 곳만 지도에 보이므로 '나머지는 지도에서' 안내를 띄우지 않는다
+      query: st.medicalQuery || '',   // 이름·진료과 검색어(ui.js가 appState.medicalQuery에 넣는다)
+      matched: matched,               // 검색어에 맞는 곳 수(목록은 최대 MEDICAL_SEARCH_MAX곳)
+      searchMax: MEDICAL_SEARCH_MAX,
       briefTitle: '병원·약국 브리핑',
-      brief: brief,
+      brief: query ? [] : brief,
       briefNote: '많이 아프거나 다쳤다면 걸어가지 말고 119에 전화하세요. 운영시간은 국립중앙의료원 E-GEN 자료라 바뀔 수 있고, 공휴일은 반영하지 않았어요.',
       items: rows.map((r) => ({
         name: entryName(r.e),
@@ -2250,7 +2309,8 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
   };
 
   const TRANSIT_TYPE_LABEL = { subway: '지하철역', bus: '버스정류장', taxi: '택시 타기 좋은 곳' };
-  const MEDICAL_TYPE_LABEL = { er: '응급실', health: '보건소', pharmacy: '약국' };
+  const MEDICAL_TYPE_LABEL = { er: '응급실', health: '보건소', pharmacy: '약국', clinic: '병원·의원' };
+  const MANY_KINDS = ['pharmacy', 'clinic'];   // 곳이 많아 목록에 든 것만 지도에 보이는 종류
 
   // 지하철역 근처(300m)에 엘리베이터 데이터가 있는지
   function stationElevatorText(st) {
@@ -2280,8 +2340,8 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
   function entryShown(e) {
     const layer = S.layers[e.layerKey];
     const d = currentDest();
-    // 약국은 90곳이 넘어서 레이어를 켜지 않고, '병원·약국' 목록·길안내에 든 곳만 보여 준다 [팀원1 추가]
-    if (d === 'medical' && e.kind === 'pharmacy' && ((S.destEntries || []).includes(e) || (S.routeEntries || []).includes(e))) return true;
+    // 약국(90곳)·병원·의원(260곳)은 많아서 레이어를 켜지 않고, '병원·약국' 목록·길안내에 든 곳만 보여 준다 [팀원1 추가]
+    if (d === 'medical' && MANY_KINDS.includes(e.kind) && ((S.destEntries || []).includes(e) || (S.routeEntries || []).includes(e))) return true;
     if (!layer || !layer.visible) return false;
     if (d === 'all') return true;
     if (d === 'transit') {
@@ -2311,7 +2371,7 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
     S.lastDest = d;
     if (d !== 'all') {
       Object.keys(S.layers).forEach((k) => {
-        if (k === 'pharmacy') return;   // 약국은 목록에 든 곳만 따로 보여 준다(entryShown)
+        if (k === 'pharmacy' || k === 'clinic') return;   // 약국·병원·의원은 목록에 든 곳만 따로 보여 준다(entryShown)
         if (S.layers[k].entries.some((e) => DESTS[d].match(e))) showLayer(k);
       });
     }
@@ -2358,8 +2418,13 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
         break;
       case 'medical':
         if (e.kind === 'er') {
-          add('🏥 응급실 · ' + (it.level || ''));
+          add('🚑 응급실 · ' + (it.level || ''));
           add('24시간');
+        } else if (e.kind === 'clinic') {
+          add('🏥 ' + (it.type || '병원·의원'));
+          add(medTodayText(e, now));
+          const ds = it.depts || [];
+          if (ds.length) add(ds.slice(0, 4).join('·') + (ds.length > 4 ? ' 외 ' + (ds.length - 4) + '과' : ''));
         } else {
           add((e.kind === 'health' ? '🩺 보건소' : '💊 약국'));
           add(medTodayText(e, now));
@@ -2632,7 +2697,7 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
     if (!target) target = pool.find((e) => entryOpenStatus(e, now) !== false && !membersOnly(e)) ||
       pool.find((e) => entryOpenStatus(e, now) !== false) || null;
     const label = d === 'toilet' ? toiletNeedLabel(profiles) : d === 'transit' ? TRANSIT_TYPE_LABEL[target ? target.kind : 'subway'] :
-      d === 'medical' ? MEDICAL_TYPE_LABEL[target ? target.kind : 'pharmacy'] : DESTS[d].label;
+      d === 'medical' ? (target && target.kind === 'clinic' ? (target.item.type || '병원·의원') : MEDICAL_TYPE_LABEL[target ? target.kind : 'pharmacy']) : DESTS[d].label;
     const wx = weatherRouteInfo(profiles, now);
     if (!target) {
       return buildPlan([], {
@@ -2882,7 +2947,7 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
     });
     // 추천 동선에 들어간 곳은 강조하고, 꺼진 레이어면 켠다
     // 약국 레이어는 켜지 않는다(90곳이 넘음). 길안내에 든 약국은 entryShown이 따로 보여 준다 [팀원1 수정]
-    (S.routeEntries || []).forEach((e) => { hi.add(e); if (e.layerKey !== 'pharmacy') showLayer(e.layerKey); });
+    (S.routeEntries || []).forEach((e) => { hi.add(e); if (e.layerKey !== 'pharmacy' && e.layerKey !== 'clinic') showLayer(e.layerKey); });
 
     // 새로 고른 프로필에 쉼터·충전기 등이 필요하면 그 레이어를 켠다(사용자가 다시 끌 수 있다)
     newlyChosen.forEach((p) => {
@@ -3391,7 +3456,7 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
       pitch: S.is3D ? PITCH_3D + 4 : 0, duration: reducedMotion() ? 0 : 1400, essential: false,
     });
     if (entry) {
-      if (entry.layerKey === 'pharmacy') entry.el.style.display = '';   // 약국은 그 핀만 보이게 [팀원1 수정]
+      if (entry.layerKey === 'pharmacy' || entry.layerKey === 'clinic') entry.el.style.display = '';   // 약국·병원은 그 핀만 보이게 [팀원1 수정]
       else showLayer(entry.layerKey);
       openEntryPopup(entry, true); // 이미 flyTo로 옮기는 중 → 다 옮긴 뒤 잘림 확인
       S.map.once('moveend', ensurePopupVisible);
@@ -3513,6 +3578,8 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
     // 날씨가 오면 길안내 경유지도 바뀌므로 전부 다시 계산한다(데이터 전이면 recompute가 그냥 돌아간다)
     document.addEventListener('conditionready', () => { if (S.data && S.origin) recompute(); });
     document.addEventListener('destinationchange', () => { if (S.data && S.origin) onDestinationChange(); });
+    // 병원·약국 이름·진료과 검색어가 바뀌면 목록을 다시 만든다 [팀원1 추가]
+    document.addEventListener('medicalquery', () => { if (S.data && S.origin && currentDest() === 'medical') { S.destTarget = null; recompute(); } });
     document.addEventListener('originpick', (e) => { const d = (e && e.detail) || {}; if (S.data && S.origin) pickOrigin(d.key); });
     document.addEventListener('themechange', (e) => { const d = (e && e.detail) || {}; if (S.overlayReady) applyMapTheme(d.theme === 'dark'); });
     document.addEventListener('focusplace', (e) => { const d = (e && e.detail) || {}; if (S.data) onFocusPlace(d.lat, d.lng); });

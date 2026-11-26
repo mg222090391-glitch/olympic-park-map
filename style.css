@@ -61,6 +61,7 @@
   --mk-er: #9f1239;            /* 응급실 (짙은 빨강) */
   --mk-health: #4338ca;        /* 보건소 (남보라) */
   --mk-pharmacy: #047857;      /* 약국 (짙은 초록) */
+  --mk-clinic: #0e7490;        /* 병원·의원 (청록) */
 
   /* 글자 */
   --font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
@@ -1460,6 +1461,30 @@ body {
 .brief-icon { flex: none; }
 .brief-note { margin-top: 8px; font-size: 0.75rem; color: var(--c-muted); }
 .brief-tel { font-weight: 700; color: var(--c-primary); white-space: nowrap; }
+
+/* 병원 이름·진료과로 찾기 [팀원1 추가] */
+.med-search { margin: 4px 0 14px; display: grid; gap: 8px; }
+.med-search[hidden] { display: none; }
+.med-search-label { font-size: 0.875rem; font-weight: 700; }
+.med-search-row { display: flex; gap: 8px; }
+.med-search-row .keyword-input { flex: 1; min-width: 0; min-height: 44px; }
+.med-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.med-chip {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--c-border);
+  border-radius: 999px;
+  background: var(--c-surface);
+  color: inherit;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.med-chip:hover { border-color: var(--c-primary); }
+.med-chip[aria-pressed="true"] { border-color: var(--c-primary); background: var(--c-primary-soft); color: var(--c-primary-strong); }
+.med-result { margin: 0 0 10px; font-size: 0.875rem; font-weight: 700; color: var(--c-muted); }
+.mk-clinic::before { content: "병"; font-size: 14px; background: var(--mk-clinic); border-radius: 8px; }
 
 /* 병원·약국 목록의 전화 버튼 [팀원1 추가] — 목록 버튼 안에 링크를 넣을 수 없어 바로 아래에 둔다 */
 .rec-tel {

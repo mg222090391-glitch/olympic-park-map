@@ -274,6 +274,26 @@
         <div id="recommend-list" class="recommend" tabindex="-1" aria-labelledby="recommend-title">
           <h2 id="recommend-title" class="card-title recommend-title"><span class="title-icon" aria-hidden="true">🚻</span>추천 화장실 <span class="sub">가깝고 칸이 많은 순</span></h2>
           <p class="recommend-basis" data-role="recommend-basis"></p>
+          <!-- 병원·약국을 골랐을 때만 보임: 병원 이름·진료과로 찾기 [팀원1 추가] -->
+          <form class="med-search" data-role="med-search" role="search" hidden>
+            <label for="med-search-input" class="med-search-label">병원 이름이나 진료과로 찾기</label>
+            <div class="med-search-row">
+              <input id="med-search-input" type="search" class="keyword-input" data-role="med-search-input" placeholder="예: 소아청소년과, 치과, ○○내과" autocomplete="off" enterkeyhint="search">
+            </div>
+            <div class="med-chips" role="group" aria-label="자주 찾는 진료과">
+              <button type="button" class="med-chip" data-med-q="내과">내과</button>
+              <button type="button" class="med-chip" data-med-q="소아청소년과">소아청소년과</button>
+              <button type="button" class="med-chip" data-med-q="이비인후과">이비인후과</button>
+              <button type="button" class="med-chip" data-med-q="정형외과">정형외과</button>
+              <button type="button" class="med-chip" data-med-q="산부인과">산부인과</button>
+              <button type="button" class="med-chip" data-med-q="피부과">피부과</button>
+              <button type="button" class="med-chip" data-med-q="안과">안과</button>
+              <button type="button" class="med-chip" data-med-q="치과">치과</button>
+              <button type="button" class="med-chip" data-med-q="한의원">한의원</button>
+              <button type="button" class="med-chip" data-med-q="약국">약국</button>
+              <button type="button" class="med-chip" data-med-q="응급실">응급실</button>
+            </div>
+          </form>
           <div data-role="recommend-body" aria-live="polite">
             <p class="status is-loading">추천을 계산하는 중이에요…</p>
           </div>

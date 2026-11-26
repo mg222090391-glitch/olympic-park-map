@@ -81,8 +81,12 @@
     aed: ['aed', '심장', '제세동', '쓰러'],
     // 병원·약국: '약'만으로는 '예약'·'약 300m'와, '아파'는 '아파트'와, '밴드'·'파스'는 '밴드 공연'·'파스타'와 헷갈려서 넣지 않는다
     medical: ['병원', '약국', '보건소', '응급실', '의원', '진료', '아파요', '아파서', '아팠', '아픈', '아프', '다쳤', '다친', '두통', '배탈', '열나', '열이나',
-      '해열제', '진통제', '소화제', '상비약', '감기약', '반창고']
+      '해열제', '진통제', '소화제', '상비약', '감기약', '반창고',
+      '내과', '소아과', '소아청소년과', '이비인후과', '정형외과', '산부인과', '피부과', '안과', '치과', '한의원', '외과', '비뇨']
   };
+  // 문장에 진료과가 있으면 병원·약국 검색어로도 넣는다 (긴 이름부터 본다) [팀원1 추가]
+  var MED_QUERY_WORDS = ['소아청소년과', '이비인후과', '정형외과', '산부인과', '비뇨의학과', '정신건강의학과', '재활의학과', '가정의학과',
+    '신경외과', '성형외과', '소아과', '한의원', '피부과', '내과', '안과', '치과', '약국', '보건소', '응급실'];
   var WEATHER_ICON = { hot: '☀️', cold: '❄️', rain: '☔' };
 
   // 도보 속도 (분당 m, 가정값). 여러 개 고르면 가장 느린 속도.
@@ -325,6 +329,13 @@
 
     if (changed) applyProfiles();
     if (foundDest) setDestination(foundDest);
+    if (foundDest === 'medical') {
+      var compactText = text.replace(/\s+/g, '');
+      var mq = MED_QUERY_WORDS.filter(function (w) { return compactText.indexOf(w) > -1; })[0] || '';
+      var medInput = $('[data-role="med-search-input"]');
+      if (medInput) medInput.value = mq;
+      setMedQuery(mq);
+    }
   }
 
   /* ---------- 5-2. 가고 싶은 곳 [팀원1 추가] ---------- */
@@ -415,9 +426,56 @@
     }
     var hint = $('[data-role="recommend-hint"]');
     if (hint) hint.hidden = !isToiletView();
+    syncMedSearch();
 
     updateRecommendBasis();
     renderRecommendations();
+  }
+
+  /* ---------- 5-3. 병원 이름·진료과로 찾기 [팀원1 추가] ---------- */
+  // 검색어를 window.appState.medicalQuery에 넣고 'medicalquery'를 보내면 map.js가 목록(window.destList)을 다시 만든다.
+  var medSearchTimer = null;
+
+  function syncMedSearch() {
+    var form = $('[data-role="med-search"]');
+    if (!form) return;
+    form.hidden = currentDest() !== 'medical';
+    var q = window.appState.medicalQuery || '';
+    var input = $('[data-role="med-search-input"]');
+    if (input && document.activeElement !== input && input.value !== q) input.value = q;
+    Array.prototype.forEach.call(form.querySelectorAll('.med-chip'), function (b) {
+      b.setAttribute('aria-pressed', b.getAttribute('data-med-q') === q ? 'true' : 'false');
+    });
+  }
+
+  function setMedQuery(q) {
+    q = String(q || '').trim();
+    if ((window.appState.medicalQuery || '') === q) { syncMedSearch(); return; }
+    window.appState.medicalQuery = q;
+    syncMedSearch();
+    send('medicalquery', { query: q });
+  }
+
+  function initMedSearch() {
+    var form = $('[data-role="med-search"]');
+    if (!form) return;
+    var input = $('[data-role="med-search-input"]');
+    form.addEventListener('submit', function (e) { e.preventDefault(); setMedQuery(input.value); input.blur(); });
+    input.addEventListener('search', function () { setMedQuery(input.value); });   // 검색칸의 ✕(지우기)
+    input.addEventListener('input', function () {
+      clearTimeout(medSearchTimer);
+      medSearchTimer = setTimeout(function () { setMedQuery(input.value); }, 300);
+    });
+    form.addEventListener('click', function (e) {
+      var chip = e.target.closest('.med-chip');
+      if (chip) {
+        var q = chip.getAttribute('data-med-q');
+        setMedQuery((window.appState.medicalQuery || '') === q ? '' : q);   // 다시 누르면 해제
+        input.value = window.appState.medicalQuery || '';
+        return;
+      }
+    });
+    syncMedSearch();
   }
 
   /* ---------- 6. 필터 버튼 ---------- */
@@ -927,10 +985,17 @@
     }
     clearTimeout(recommendTimer);
     if (!list.items.length) {
-      body.innerHTML = '<div class="rec-empty"><b>가까운 ' + esc(list.label) + ' 정보가 없어요.</b>다른 곳을 골라 보세요.</div>';
+      body.innerHTML = list.query ?
+        '<div class="rec-empty"><b>‘' + esc(list.query) + '’에 맞는 병원·약국을 공원 주변(약 1.5km)에서 찾지 못했어요.</b>진료과 이름(예: 소아청소년과)이나 병원 이름 일부로 다시 찾아보세요.</div>' :
+        '<div class="rec-empty"><b>가까운 ' + esc(list.label) + ' 정보가 없어요.</b>다른 곳을 골라 보세요.</div>';
       return;
     }
     var html = '';
+    if (list.query) {
+      html += '<p class="med-result">‘' + esc(list.query) + '’ ' + list.matched + '곳 · 가까운 순' +
+        (list.matched > list.items.length ? ' (가까운 ' + list.items.length + '곳만 보여요)' : '') +
+        ' · 누르면 그곳까지 길안내해요</p>';
+    }
     // 교통 브리핑(역·버스·택시를 골랐을 때)
     if (list.brief && list.brief.length) {
       html += '<div class="brief">' +
@@ -1495,6 +1560,7 @@
     applyUrlState();                                               // [팀원1 추가] 공유 주소(#…)로 열었을 때
     initShare();                                                   // [팀원1 추가]
     initEmergency();                                               // [팀원1 추가] 응급 화면
+    initMedSearch();                                               // [팀원1 추가] 병원 이름·진료과로 찾기
     window.addEventListener('hashchange', handleHashChange);       // [팀원1 추가]
     var quick = $('[data-role="share-quick"]');                    // [팀원1 추가] 이 설정 공유하기
     if (quick) quick.addEventListener('click', quickShare);

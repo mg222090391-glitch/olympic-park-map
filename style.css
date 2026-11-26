@@ -2046,3 +2046,172 @@ html[data-size="large"] .hint,
 html[data-size="large"] .origin-now { color: var(--c-text); }
 html[data-size="large"] .site-tagline { color: #fff; }
 .em-copy-result:empty { display: none; }
+
+/* ---------- 20. 다듬기 3차: 첫 화면 · 카드 · 버튼 [팀원1 추가] ---------- */
+/* 응급 버튼: 색은 그대로 빨강, 덜 무겁고 또렷하게 (왼쪽 아이콘 칸 + 오른쪽 화살표) */
+.emergency-bar {
+  padding: 8px 12px;
+  background: var(--c-bg);
+  background: color-mix(in srgb, var(--c-bg) 86%, transparent);
+  -webkit-backdrop-filter: saturate(1.4) blur(10px);
+  backdrop-filter: saturate(1.4) blur(10px);
+  box-shadow: 0 1px 0 rgba(16, 40, 28, 0.06);
+}
+.emergency-btn {
+  position: relative;
+  gap: 12px;
+  padding: 0 44px 0 8px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #d42a2a 0%, #b81c1c 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 6px 18px rgba(185, 28, 28, 0.26);
+  transition: transform 0.12s, box-shadow 0.15s, filter 0.15s;
+}
+.emergency-btn:hover { background: linear-gradient(180deg, #c92424 0%, #a81818 100%); }
+.emergency-btn:active { transform: translateY(1px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 2px 8px rgba(185, 28, 28, 0.3); }
+.emergency-btn::after {
+  content: "›";
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-52%);
+  font-size: 1.75rem;
+  font-weight: 400;
+  line-height: 1;
+  opacity: 0.85;
+}
+.em-btn-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+  font-size: 1.25rem;
+}
+.em-btn-text { flex: 1; text-align: center; }
+.em-btn-sub { font-weight: 600; opacity: 0.9; }
+html[data-theme="dark"] .emergency-bar { background: color-mix(in srgb, var(--c-bg) 86%, transparent); box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06); }
+
+/* 카드: 테두리는 옅게, 그림자는 부드럽게, 제목 아래 여백을 일정하게 */
+.card {
+  border-color: rgba(16, 40, 28, 0.07);
+  box-shadow: 0 1px 2px rgba(16, 40, 28, 0.04), 0 8px 24px rgba(16, 40, 28, 0.06);
+}
+html[data-theme="dark"] .card { border-color: var(--c-border); }
+.card-title { letter-spacing: -0.025em; }
+.step-num { width: 28px; height: 28px; font-size: 0.875rem; }
+.card-title .sub, .recommend-title .sub { font-weight: 600; color: var(--c-muted); }
+
+/* 오늘 방문 요약: 줄마다 작은 타일 + 아이콘 칸, 제목 줄은 작은 이름표로 */
+.visit-card {
+  background:
+    radial-gradient(120% 120% at 100% 0%, rgba(134, 239, 172, 0.18) 0%, rgba(134, 239, 172, 0) 55%),
+    var(--c-surface);
+}
+html[data-theme="dark"] .visit-card {
+  background:
+    radial-gradient(120% 120% at 100% 0%, rgba(76, 195, 138, 0.12) 0%, rgba(76, 195, 138, 0) 55%),
+    var(--c-surface);
+}
+.visit-list > li {
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+}
+.visit-list > li > span:last-child { min-width: 0; }
+.visit-list > li b {
+  display: block;
+  margin: 0 0 1px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--c-muted);
+}
+.visit-icon {
+  display: grid;
+  place-items: center;
+  width: 38px; height: 38px;
+  border-radius: 11px;
+  background: var(--c-surface);
+  box-shadow: inset 0 0 0 1px var(--c-border), 0 1px 2px rgba(16, 40, 28, 0.06);
+  font-size: 1.15rem;
+}
+.visit-dests { margin-top: 8px; }
+.visit-dest { transition: transform 0.12s, background-color 0.15s; }
+.visit-dest:active { transform: translateY(1px); }
+
+/* 상황 칩: 네모 체크 상자 → 둥근 체크 표시 */
+.chip input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: grid;
+  place-items: center;
+  width: 22px; height: 22px;
+  border: 2px solid var(--c-border-strong);
+  border-radius: 50%;
+  background: var(--c-surface);
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.chip input[type="checkbox"]::after {
+  content: "";
+  width: 5px; height: 10px;
+  margin-top: -2px;
+  border: solid #fff;
+  border-width: 0 2.5px 2.5px 0;
+  transform: rotate(45deg) scale(0);
+  transition: transform 0.15s;
+}
+.chip input[type="checkbox"]:checked { background: var(--c-primary); border-color: var(--c-primary); }
+.chip input[type="checkbox"]:checked::after { transform: rotate(45deg) scale(1); }
+html[data-theme="dark"] .chip input[type="checkbox"]::after { border-color: #0f1512; }
+.chip { transition: border-color 0.15s, background-color 0.15s, transform 0.12s; }
+.chip:active { transform: translateY(1px); }
+.chip.is-checked { box-shadow: 0 0 0 1px var(--c-primary) inset, 0 4px 12px rgba(20, 112, 75, 0.12); }
+
+/* 키워드 결과가 비어 있으면 칸을 차지하지 않게 */
+.keyword-result:empty { min-height: 0; margin-top: 0; }
+.profile-options { margin-top: 12px; }
+
+/* 어디 가요 타일: 고른 곳은 더 또렷하게, 마우스를 올리면 살짝 뜨게 */
+.dest-btn { transition: transform 0.12s, border-color 0.15s, background-color 0.15s, box-shadow 0.15s; }
+@media (hover: hover) {
+  .dest-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16, 40, 28, 0.08); }
+}
+.dest-btn[aria-pressed="true"] { box-shadow: 0 0 0 1px var(--c-primary) inset, 0 6px 16px rgba(20, 112, 75, 0.14); }
+.dest-badge { box-shadow: 0 2px 6px rgba(20, 112, 75, 0.25); }
+
+/* 이 설정 공유하기: 카드 아래 옅은 띠로 */
+.share-quick {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--c-surface-2);
+  border: 1px dashed var(--c-border-strong);
+}
+.share-quick-btn { min-height: 40px; padding: 0 16px; border-width: 1.5px; border-radius: 999px; font-size: 0.875rem; }
+
+/* 출발지: '출발 · 내 위치 · 다른 곳에서 출발'을 한 줄로 */
+.origin-bar { display: inline-flex; vertical-align: middle; margin-top: 12px; }
+.origin-more { display: inline-block; vertical-align: middle; margin: 12px 0 0 6px; }
+.origin-more[open] { display: block; margin-left: 0; }
+.origin-more > summary { min-height: 48px; }
+.origin-gps { box-shadow: 0 1px 2px rgba(16, 40, 28, 0.06); }
+
+/* 추천 목록 항목: 순위 동그라미와 글자 사이 여백, 누를 때 반응 */
+.rec-item { transition: transform 0.12s, background-color 0.15s, border-color 0.15s; }
+.rec-item:active { transform: translateY(1px); }
+/* 방문 요약의 날씨 줄은 세 줄까지만(자세한 내용은 아래 '오늘의 컨디션' 카드) */
+.visit-list > li:first-child > span:last-child {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+@media (max-width: 719px) {
+  .origin-more { display: block; margin-left: 0; }
+}

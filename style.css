@@ -58,6 +58,9 @@
   --mk-subway: #1e5aa8;        /* 지하철역 */
   --mk-bus: #2b8a3e;           /* 버스정류장 */
   --mk-taxi: #e8a400;          /* 택시 (검은 글자) */
+  --mk-er: #9f1239;            /* 응급실 (짙은 빨강) */
+  --mk-health: #4338ca;        /* 보건소 (남보라) */
+  --mk-pharmacy: #047857;      /* 약국 (짙은 초록) */
 
   /* 글자 */
   --font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
@@ -926,6 +929,9 @@ a { color: var(--c-primary); text-underline-offset: 3px; }
 .mk-subway::before            { content: "역"; font-size: 14px; background: var(--mk-subway); border-radius: 9px; }
 .mk-bus::before               { content: "B"; font-size: 15px; background: var(--mk-bus); border-radius: 50% 50% 6px 6px; width: 26px; height: 28px; }
 .mk-taxi::before              { content: "TAXI"; font-size: 8.5px; letter-spacing: -0.2px; color: #1a1a1a; background: var(--mk-taxi); border-radius: 7px; width: 32px; height: 22px; }
+.mk-er::before                { content: "응급"; font-size: 11px; letter-spacing: -0.5px; background: var(--mk-er); border-radius: 7px; width: 32px; height: 26px; }
+.mk-health::before            { content: "보건"; font-size: 11px; letter-spacing: -0.5px; background: var(--mk-health); border-radius: 7px; width: 32px; height: 26px; }
+.mk-pharmacy::before          { content: "약"; font-size: 15px; background: var(--mk-pharmacy); border-radius: 50%; }
 
 /* 강조된 마커 (예: 날씨에 맞춰 가까운 쉼터) */
 .mk.mk-highlight { z-index: 1000 !important; }
@@ -1295,6 +1301,7 @@ body {
   .map-card { padding: 18px; }
   #filter-bar { margin: 0; padding: 2px 0 4px; flex-wrap: wrap; overflow: visible; }
   .dest-options { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+  .dest-options .dest-btn.dest-wide { grid-column: span 4; }
   #map { height: 520px; max-height: none; }
   .chart-box { height: 280px; }
   .source-list { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; }
@@ -1360,6 +1367,7 @@ body {
   /* 왼쪽 패널은 조금 촘촘하게 */
   #condition-card, #profile-select, #dest-select, .rec-card { padding: 18px; }
   .dest-options { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .dest-options .dest-btn.dest-wide { grid-column: span 2; }
   .dest-btn { min-height: 66px; }
   .chip { min-height: 44px; padding: 4px 14px 4px 10px; }
   .keyword-input, .keyword-form .btn { min-height: 48px; }
@@ -1417,15 +1425,17 @@ body {
   .theme-text { display: none; }
 }
 
-/* '역·버스·택시'는 한 줄 넓은 타일 */
+/* '역·버스·택시'·'병원·약국'은 넓은 타일 (둘이 한 줄을 반씩) */
 .dest-btn.dest-wide {
-  grid-column: 1 / -1;
+  grid-column: span 2;
   flex-direction: row;
   gap: 10px;
   min-height: 52px;
 }
+.dest-wide .dest-text { text-align: left; line-height: 1.3; }
 .dest-wide small {
-  margin-left: 4px;
+  display: block;
+  margin-left: 0;
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--c-muted);
@@ -1449,6 +1459,26 @@ body {
 .brief li { display: flex; gap: 8px; font-size: 0.875rem; line-height: 1.5; }
 .brief-icon { flex: none; }
 .brief-note { margin-top: 8px; font-size: 0.75rem; color: var(--c-muted); }
+.brief-tel { font-weight: 700; color: var(--c-primary); white-space: nowrap; }
+
+/* 병원·약국 목록의 전화 버튼 [팀원1 추가] — 목록 버튼 안에 링크를 넣을 수 없어 바로 아래에 둔다 */
+.rec-tel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 40px;
+  margin: 4px 0 2px 44px;
+  padding: 0 12px;
+  border: 1px solid var(--c-border);
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--c-primary);
+  text-decoration: none;
+}
+.rec-tel:hover { border-color: var(--c-primary); }
+.pop-tel { font-weight: 700; }
+.pop-src { font-size: 0.75rem; color: var(--c-muted); }
 
 .route-head {
   display: flex;
@@ -1859,6 +1889,12 @@ html { scroll-padding-top: calc(var(--em-bar-h) + 8px); }
 .em-route { grid-column: 1 / -1; min-height: 48px; border-color: var(--mk-aed); color: #b91c1c; }
 .em-route:hover { background: #fdecea; }
 .em-aed-empty { padding: 10px 0; font-weight: 700; }
+.em-sub { font-size: 0.8125rem; font-weight: 600; color: var(--c-muted); }
+.em-er-rank { background: var(--mk-er); }
+.em-er-actions { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.em-er-actions .btn { min-height: 48px; text-decoration: none; justify-content: center; white-space: nowrap; }
+.em-er-tel { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; }
+.em-er-actions .em-er-route { grid-column: auto; }
 .em-note { font-size: 0.8125rem; color: var(--c-muted); }
 .em-todo p { font-size: 1.0625rem; font-weight: 600; line-height: 1.55; }
 .em-close { min-height: 56px; width: 100%; }
@@ -1866,6 +1902,7 @@ html { scroll-padding-top: calc(var(--em-bar-h) + 8px); }
   .em-inner { padding-top: 28px; }
   .em-aed { grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; }
   .em-route { grid-column: auto; }
+  .em-er-actions { grid-column: auto; grid-template-columns: auto auto; }
 }
 html[data-theme="dark"] .em-head h2,
 html[data-theme="dark"] .em-place.is-none,
@@ -2229,6 +2266,7 @@ html[data-theme="dark"] .chip input[type="checkbox"]::after { border-color: #0f1
   --ic-elevator: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='3' width='16' height='18' rx='2'/%3E%3Cpath d='M9.5 10l2.5-2.5L14.5 10M9.5 14l2.5 2.5 2.5-2.5'/%3E%3C/svg%3E");
   --ic-aed: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z'/%3E%3Cpath d='M7.5 12.5h2.5l1-2 2 4 1-2h2.5'/%3E%3C/svg%3E");
   --ic-transit: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='3' width='14' height='15' rx='2'/%3E%3Cpath d='M5 11h14M8 21v-3M16 21v-3M8.5 14.5h.01M15.5 14.5h.01'/%3E%3C/svg%3E");
+  --ic-medical: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3.5' y='3.5' width='17' height='17' rx='3'/%3E%3Cpath d='M12 8v8M8 12h8'/%3E%3C/svg%3E");
   --ic-wheelchair: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='4' r='1.6'/%3E%3Cpath d='M11 7v6h5l2 5'/%3E%3Cpath d='M11 10h4'/%3E%3Cpath d='M8 10.5a5.5 5.5 0 1 0 7 7'/%3E%3C/svg%3E");
   --ic-stroller: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 5h2l2.5 9h11a7 7 0 0 0-7-7V5'/%3E%3Ccircle cx='9' cy='19' r='1.6'/%3E%3Ccircle cx='17' cy='19' r='1.6'/%3E%3C/svg%3E");
   --ic-elderly: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='10' cy='4' r='1.6'/%3E%3Cpath d='M10 7l-1 6 2 3v5M9 13l-2 8M10 8.5l3 2.5h2M15 11v10'/%3E%3C/svg%3E");
@@ -2460,6 +2498,8 @@ html[data-theme="dark"] .chip input[type="checkbox"]::after { border-color: #0b1
 .dest-btn[data-dest="elevator"] .dest-icon { --ic: var(--ic-elevator); }
 .dest-btn[data-dest="aed"] .dest-icon { --ic: var(--ic-aed); color: #c8191f; }
 .dest-btn[data-dest="transit"] .dest-icon { --ic: var(--ic-transit); }
+.dest-btn[data-dest="medical"] .dest-icon { --ic: var(--ic-medical); color: #9f1239; }
+html[data-theme="dark"] .dest-btn[data-dest="medical"] .dest-icon { color: #fda4af; }
 html[data-theme="dark"] .dest-btn[data-dest="aed"] .dest-icon { color: #ff8a80; }
 .dest-badge {
   top: -7px; right: -3px;

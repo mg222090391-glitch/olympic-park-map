@@ -10,11 +10,13 @@
  *  - 보내는 이벤트(추가): originchange { key, label, lat, lng } — 기준(출발) 위치가 바뀔 때
  *  - 듣는 이벤트(추가): themechange { theme: 'light' | 'dark' } — 지도 색을 밝게/어둡게
  *  - data/transit.json(추가): 지하철역·버스정류장(OpenStreetMap)과 택시 타기 좋은 곳. '역·버스·택시' 목적지와 교통 브리핑에 쓴다
+ *  - data/medical.json(추가): 응급실·보건소·약국(국립중앙의료원 E-GEN). '병원·약국' 목적지, 의료 브리핑, 응급 화면의 가까운 응급실에 쓴다
  *  - 보내는 이벤트: recommendready, routeready (실패 시 mapdataerror)
  *  - 채우는 것(추가): window.routePlan — 상황별 '들를 곳 순서'(직선거리 기준). 상황을 안 고르면 null
  *      가고 싶은 곳(appState.destination)을 고르면 그곳까지의 '길안내'가 되고, 날씨에 맞는 경유지가 들어간다.
  *  - 채우는 것(추가): window.destList — 가고 싶은 곳이 화장실이 아닐 때 가까운 시설 목록(필요한 정보만)
- *  - 마커 : <div class="mk mk-종류"> (종류: toilet, toilet-accessible, facility, heat, cold, charger, elevator, aed, me)
+ *  - 마커 : <div class="mk mk-종류"> (종류: toilet, toilet-accessible, facility, heat, cold, charger, elevator, aed, me,
+ *          subway, bus, taxi, er(응급실), health(보건소), pharmacy(약국))
  *      강조 'mk-highlight', 흐림 'mk-dim' (팀원3 style.css 약속). 아이콘 모양은 style.css의 .mk-종류::before가 그린다.
  *      3D 핀 모양을 위해 바깥에 .mk-wrap(기둥·그림자)을 한 겹 더 씌웠다. 이 겉 칸은 팀원3이 꾸밀 필요 없다.
  *  - #map 상태 클래스: 불러오는 중 'is-loading', 실패 'is-error'
@@ -24,7 +26,8 @@
  *  - recommendations 항목에는 약속된 6개 값에 더해 stallsType('total'|'female'|'accessible')을 넣는다.
  *      [추가] walkM(걷는 거리 m), pathBased(true: 걷는 길 기준 / false: 길을 못 찾아 직선거리로 대신)도 넣는다.
  *  - 응급 화면(추가): 'emergencyopen'을 들으면 window.emergencyInfo(지금 위치 설명·가까운 AED)를 채우고
- *      'emergencyready'를 보낸다. 'emergencyroute' { lat, lng }를 들으면 그 AED까지 길안내를 만든다.
+ *      'emergencyready'를 보낸다. 'emergencyroute' { lat, lng, dest }를 들으면 그 AED(또는 dest가 'medical'이면 응급실)까지 길안내를 만든다.
+ *      emergencyInfo.ers = 가까운 응급실 [{ name, level, tel, addr, lat, lng, meters, pathBased }]
  *
  * index.html에 필요한 것 (Leaflet 대신):
  *   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.1/dist/maplibre-gl.css">
@@ -42,6 +45,7 @@
   const DATA_URL = 'data/olympic_park_data.json';
   const WALK_GRAPH_URL = 'data/walk_graph.json';
   const TRANSIT_URL = 'data/transit.json';          // 지하철역·버스정류장·택시 타기 좋은 곳  // 걷는 길 그래프(OpenStreetMap). tools/build_walk_graph.py로 만든다
+  const MEDICAL_URL = 'data/medical.json';          // 응급실·보건소·약국 (국립중앙의료원 E-GEN)
   const MOCK_URL = 'mock_data.js';             // ?demo 일 때만 불러오는 가상 데이터
   const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
   const FALLBACK_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -107,6 +111,8 @@
   const REPORT_FORM_URL = '';
   // 응급 화면에 보여 줄 가까운 AED 수 [팀원1 추가]
   const EMERGENCY_AED_COUNT = 3;
+  // 응급 화면에 보여 줄 가까운 응급실 수 [팀원1 추가]
+  const EMERGENCY_ER_COUNT = 2;
   // 위치가 의심스러운 AED는 응급 화면의 '가까운 AED'에서 빼고, AED 목록에서는 뒤로 보낸다 [팀원1 추가]
   //  1) 서로 다른 건물 여러 곳(만남의광장·평화의광장·올림픽홀·수영장 등)이 같은 좌표로 들어 있는 곳
   const AED_UNSURE_COORDS = ['37.520339698,127.1155178766'];
@@ -135,6 +141,9 @@
     'subway':            { color: '#1e5aa8', emoji: '🚇' },
     'bus':               { color: '#2f9e44', emoji: '🚌' },
     'taxi':              { color: '#e8a400', emoji: '🚕' },
+    'er':                { color: '#9f1239', emoji: '🏥' },
+    'health':            { color: '#4338ca', emoji: '🩺' },
+    'pharmacy':          { color: '#047857', emoji: '💊' },
   };
   const kindColor = (kind) => 'var(--mk-' + kind + ', ' + (KIND_STYLE[kind] || KIND_STYLE.facility).color + ')';
 
@@ -363,6 +372,102 @@
   function chargerOpenNow(c, now) {
     now = now || new Date();
     return openStatusFromText(isHolidayLike(now) ? c.holiday : c.weekday, now);
+  }
+
+  // ───── 병원·약국 운영 판단 [팀원1 추가] ─────
+  // data/medical.json의 hours: { mon: '0900-1930', ..., sun, hol } (HHMM-HHMM, 2400을 넘으면 다음 날 새벽)
+  // sun_weeks: '11111'처럼 일요일 운영 주차(첫째~다섯째). 공휴일 달력은 반영하지 않는다(hol은 팝업에만 보여 준다).
+  const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  const DAY_KO = { sun: '일', mon: '월', tue: '화', wed: '수', thu: '목', fri: '금', sat: '토', hol: '공휴일' };
+
+  function hhmmToMin(v) {
+    const m = /^(\d{1,2})(\d{2})$/.exec(String(v || '').trim());
+    return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+  }
+
+  function medRange(v) {
+    const p = String(v || '').split('-');
+    if (p.length !== 2) return null;
+    const s = hhmmToMin(p[0]);
+    let e = hhmmToMin(p[1]);
+    if (s === null || e === null) return null;
+    if (e <= s) e += 24 * 60;                   // 22:00-02:00처럼 적힌 경우도 다음 날 새벽으로 본다
+    return { start: s, end: e };
+  }
+
+  function minText(m) {
+    if (m === 24 * 60) return '24:00';
+    const next = m > 24 * 60;
+    const mm = m % (24 * 60);
+    return (next ? '다음 날 ' : '') + String(Math.floor(mm / 60)).padStart(2, '0') + ':' + String(mm % 60).padStart(2, '0');
+  }
+
+  function medRangeText(v) {
+    const r = medRange(v);
+    return r ? minText(r.start) + '~' + minText(r.end) : '';
+  }
+
+  function sundayOpenWeek(it, date) {
+    const w = String(it.sun_weeks || '');
+    if (!/^[01]{5}$/.test(w)) return true;     // 주차 정보가 없으면 일요일 시간대로 본다
+    return w[Math.ceil(date.getDate() / 7) - 1] === '1';
+  }
+
+  // 그날(date) 운영 시간 범위 { start, end }(분) 또는 null(쉼). 일요일은 운영 주차를 본다
+  function medDayRange(it, date) {
+    const key = DAY_KEYS[date.getDay()];
+    const h = it.hours || {};
+    if (key === 'sun' && !sundayOpenWeek(it, date)) return null;
+    return medRange(h[key]);
+  }
+
+  // true(지금 운영) / false(지금 닫음) / null(운영시간 정보 없음). 응급실은 늘 true
+  function medicalOpenNow(e, now) {
+    now = now || new Date();
+    if (e.kind === 'er') return true;
+    const it = e.item;
+    const h = it.hours || {};
+    if (!Object.keys(h).some((k) => h[k])) return null;
+    const cur = now.getHours() * 60 + now.getMinutes();
+    const today = medDayRange(it, now);
+    if (today && cur >= today.start && cur < today.end) return true;
+    // 어제 밤부터 이어지는 운영(예: 09:00~다음 날 01:00)
+    const yr = medDayRange(it, new Date(now.getTime() - 24 * 3600 * 1000));
+    if (yr && yr.end > 24 * 60 && cur + 24 * 60 < yr.end) return true;
+    return false;
+  }
+
+  // 오늘 운영시간 한 줄: '오늘(목) 09:00~21:00' / '오늘(일) 쉼'
+  function medTodayText(e, now) {
+    if (e.kind === 'er') return '24시간 응급진료';
+    const it = e.item;
+    const h = it.hours || {};
+    const key = DAY_KEYS[now.getDay()];
+    let txt = medRangeText(h[key]);
+    if (key === 'sun' && txt && !sundayOpenWeek(it, now)) txt = '';
+    return '오늘(' + DAY_KO[key] + ') ' + (txt || '쉼');
+  }
+
+  // 요일별 시간을 묶어서: '월~금 09:00~18:00 · 토 09:00~14:00 · 일 쉼'
+  function medWeekText(it) {
+    const h = it.hours || {};
+    const order = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+    const groups = [];
+    order.forEach((k) => {
+      const t = medRangeText(h[k]) || '쉼';
+      const g = groups[groups.length - 1];
+      if (g && g.t === t) g.keys.push(k);
+      else groups.push({ t: t, keys: [k] });
+    });
+    const dayLabel = (keys) => (keys.length > 2 ? DAY_KO[keys[0]] + '~' + DAY_KO[keys[keys.length - 1]] : keys.map((k) => DAY_KO[k]).join('·'));
+    let out = groups.map((g) => dayLabel(g.keys) + ' ' + g.t).join(' · ');
+    if (h.sun && /^[01]{5}$/.test(String(it.sun_weeks || '')) && it.sun_weeks !== '11111') {
+      const nth = ['첫째', '둘째', '셋째', '넷째', '다섯째'];
+      const weeks = String(it.sun_weeks).split('').map((v, i) => (v === '1' ? nth[i] : null)).filter(Boolean);
+      out += ' (일요일은 ' + weeks.join('·') + ' 주만)';
+    }
+    if (medRangeText(h.hol)) out += ' · 공휴일 ' + medRangeText(h.hol);
+    return out;
   }
 
   // ───────────────────── 5. 공유 상태 ─────────────────────
@@ -642,6 +747,17 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
       (tr.bus_stops || []).forEach((b) => { b.ttype = 'bus'; count(addEntry('bus', 'transit', 'bus', b, b.name + ' 정류장')); });
       addLayer('taxi', '택시 타기 좋은 곳', 'taxi', false);
       (tr.taxi || []).forEach((t) => { t.ttype = 'taxi'; count(addEntry('taxi', 'transit', 'taxi', t, '택시 · ' + t.name)); });
+    }
+
+    // 병원·약국 [팀원1 추가]: 처음엔 숨김 → '병원·약국'을 고르면 보임
+    const md = data.medical;
+    if (md) {
+      addLayer('er', '응급실', 'er', false);
+      (md.emergency_rooms || []).forEach((h) => count(addEntry('er', 'medical', 'er', h, '응급실 · ' + h.name)));
+      addLayer('health', '보건소', 'health', false);
+      (md.health_centers || []).forEach((h) => count(addEntry('health', 'medical', 'health', h, h.name)));
+      addLayer('pharmacy', '약국', 'pharmacy', false);
+      (md.pharmacies || []).forEach((h) => count(addEntry('pharmacy', 'medical', 'pharmacy', h, '약국 · ' + h.name)));
     }
 
     if (skipped) console.warn('[map.js] 좌표가 없거나 잘못된 항목 ' + skipped + '개는 지도에서 뺐어요.');
@@ -1010,6 +1126,13 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
       .join('');
   }
 
+  // 전화번호 줄: 누르면 바로 전화(휴대폰) [팀원1 추가]
+  function telRowHtml(tel, label) {
+    const t = String(tel || '').trim();
+    if (!t) return '';
+    return '<p class="pop-row"><b>' + esc(label || '전화') + '</b> <a class="pop-tel" href="tel:' + esc(t.replace(/[^\d+]/g, '')) + '">' + esc(t) + '</a></p>';
+  }
+
   function noteHtml(text) {
     return text ? '<p class="pop-note">' + esc(text) + '</p>' : '';
   }
@@ -1122,6 +1245,27 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
           h += noteHtml('공식 택시 승강장이 아니라, 큰길과 바로 이어지는 출입구를 추천한 곳이에요.');
         }
         break;
+      case 'medical': {
+        st = medicalOpenNow(entry, now);
+        if (entry.kind === 'er') {
+          h += headHtml('er', '응급실 · ' + (it.level || '응급의료기관'), it.name);
+          h += badgeHtml('is-open', '24시간 응급진료');
+          h += rowsHtml([['병원 종류', it.type], ['주소', it.addr]]) + telRowHtml(it.tel, '대표전화');
+          h += rowsHtml([['거리', distanceText(it)], ['비고', it.note]]);
+          h += noteHtml('위급하면 걸어가지 말고 119에 전화하세요. 응급실 사정(병상·진료과)은 그때그때 달라요.');
+        } else {
+          const what = entry.kind === 'health' ? '보건소' : '약국';
+          h += headHtml(entry.kind, what, it.name);
+          h += stateHtml(st, '지금 문 열었어요', '지금 문 닫았어요', '운영시간 확인 필요');
+          h += rowsHtml([['오늘', medTodayText(entry, now).replace(/^오늘/, '')], ['운영시간', medWeekText(it)], ['주소', it.addr]]) +
+            telRowHtml(it.tel, '전화');
+          h += rowsHtml([['거리', distanceText(it)], ['비고', it.note]]);
+          h += noteHtml('운영시간은 바뀔 수 있어요. 공휴일은 반영하지 않았으니 전화로 확인하세요.' +
+            (entry.kind === 'health' ? ' 보건소는 진료·접종 업무가 정해져 있어요.' : ''));
+        }
+        h += '<p class="pop-row pop-src">출처: 국립중앙의료원 E-GEN</p>';
+        break;
+      }
       default: // facility
         h += headHtml('facility', '편의시설 · ' + (it.type || '기타'), it.place || it.type);
         h += rowsHtml([['상세 위치', it.detail], ['비고', it.note], ['거리', distanceText(it)]]);
@@ -1375,6 +1519,7 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
   function entryName(e) {
     if (e.cat === 'elevator') return (e.item.station || '지하철역') + ' 엘리베이터';
     if (e.cat === 'facility') return e.item.place || e.item.type || '편의시설';
+    if (e.cat === 'medical') return e.item.name;
     if (e.cat === 'transit') {
       if (e.kind === 'subway') return e.item.name + '역';
       if (e.kind === 'bus') return e.item.name + ' 정류장';
@@ -1565,6 +1710,90 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
         walkMin: Math.max(1, Math.round(walkMinutes(r.m, st.profiles))),
         status: null,
         facts: destFacts(r.e, new Date()),
+      })),
+    };
+  }
+
+  // ───────────────────── 10-5-2. 병원·약국: 가까운 약국·보건소·응급실 [팀원1 추가] ─────────────────────
+  // 목록: 약국 3곳(지금 연 곳 먼저) + 보건소 1곳 + 응급실 2곳을 가까운 순(문 닫은 곳은 뒤로).
+  // 맨 위 '의료 브리핑'에 지금 연 약국 · 보건소 · 응급실을 한 줄씩 요약한다.
+  const MEDICAL_PICK = { pharmacy: 3, health: 1, er: 2 };
+
+  // 지금 열려 있으면 언제 닫는지(분). 모르면 null
+  function medCloseMin(e, now) {
+    const it = e.item;
+    const cur = now.getHours() * 60 + now.getMinutes();
+    const t = medDayRange(it, now);
+    if (t && cur >= t.start && cur < t.end) return t.end;
+    const y = medDayRange(it, new Date(now.getTime() - 24 * 3600 * 1000));
+    if (y && y.end > 24 * 60 && cur + 24 * 60 < y.end) return y.end - 24 * 60;
+    return null;
+  }
+
+  function computeMedicalList(st, now) {
+    // 응급실은 공원 밖 1~3km라 걷는 길 그래프 밖일 때가 많고, 보통 차로 가므로 직선거리로 견준다(응급 화면과 같은 기준)
+    const all = S.entries.filter((e) => e.cat === 'medical').map((e) => {
+      const d = e.kind === 'er' ? { m: haversine(S.origin.lat, S.origin.lng, e.item.lat, e.item.lng), path: false } : distFromOrigin(e.item, st.profiles);
+      return { e: e, m: d.m, path: d.path, status: medicalOpenNow(e, now) };
+    });
+    const pick = (kind, n) => all.filter((r) => r.e.kind === kind)
+      .sort((a, b) => (a.status === false) - (b.status === false) || a.m - b.m)
+      .slice(0, n);
+    const groups = { pharmacy: pick('pharmacy', MEDICAL_PICK.pharmacy), health: pick('health', MEDICAL_PICK.health), er: pick('er', MEDICAL_PICK.er) };
+    const rows = groups.pharmacy.concat(groups.health, groups.er)
+      .sort((a, b) => (a.status === false) - (b.status === false) || a.m - b.m);
+    // 응급 화면·지도에서 직접 고른 곳이 목록 밖이면 끝에 붙인다
+    if (S.destTarget && !rows.some((r) => r.e.item.lat + ',' + r.e.item.lng === S.destTarget)) {
+      const extra = all.find((r) => r.e.item.lat + ',' + r.e.item.lng === S.destTarget);
+      if (extra) rows.push(extra);
+    }
+    S.destEntries = rows.map((r) => r.e);
+    const distText = (r) => (r.path ? '걸어서 ' : '직선 ') + roughMeters(r.m) +
+      (r.m <= 2000 ? ' · 도보 약 ' + Math.max(1, Math.round(walkMinutes(r.m, st.profiles))) + '분' : '');
+    const brief = [];
+    const ph = groups.pharmacy[0];
+    if (ph) {
+      const it = ph.e.item;
+      if (ph.status === true) {
+        const c = medCloseMin(ph.e, now);
+        brief.push({ icon: '💊', kind: 'pharmacy', lat: it.lat, lng: it.lng,
+          text: '지금 연 약국: ' + it.name + ' · ' + distText(ph) + (c !== null ? ' · ' + minText(c) + '까지' : '') });
+      } else {
+        brief.push({ icon: '💊', kind: 'pharmacy', lat: it.lat, lng: it.lng,
+          text: '근처 약국이 지금 모두 닫았어요. 가장 가까운 곳: ' + it.name + ' · ' + distText(ph) + ' · ' + medTodayText(ph.e, now) });
+      }
+    }
+    const hc = groups.health[0];
+    if (hc) {
+      const it = hc.e.item;
+      brief.push({ icon: '🩺', kind: 'health', lat: it.lat, lng: it.lng,
+        text: '보건소: ' + it.name + ' · ' + distText(hc) + ' · ' + (hc.status === true ? '지금 문 열었어요' : '지금 문 닫았어요') +
+          '(' + medWeekText(it).split(' · ')[0] + ')' });
+    }
+    const er = groups.er.slice().sort((a, b) => a.m - b.m)[0];
+    if (er) {
+      const it = er.e.item;
+      brief.push({ icon: '🏥', kind: 'er', lat: it.lat, lng: it.lng, tel: it.tel,
+        text: '응급실: ' + it.name + '(' + it.level + ') · ' + distText(er) + ' · 24시간 · ' + it.tel });
+    }
+    return {
+      dest: 'medical',
+      label: DESTS.medical.label,
+      total: rows.length,           // 약국은 목록에 든 곳만 지도에 보이므로 '나머지는 지도에서' 안내를 띄우지 않는다
+      briefTitle: '병원·약국 브리핑',
+      brief: brief,
+      briefNote: '많이 아프거나 다쳤다면 걸어가지 말고 119에 전화하세요. 운영시간은 국립중앙의료원 E-GEN 자료라 바뀔 수 있고, 공휴일은 반영하지 않았어요.',
+      items: rows.map((r) => ({
+        name: entryName(r.e),
+        kind: r.e.kind,
+        lat: r.e.item.lat,
+        lng: r.e.item.lng,
+        meters: Math.round(r.m),
+        pathBased: r.path,
+        walkMin: Math.max(1, Math.round(walkMinutes(r.m, st.profiles))),
+        status: r.e.kind === 'er' ? null : r.status === true ? 'open' : r.status === false ? 'closed' : 'unknown',
+        tel: r.e.item.tel || '',
+        facts: destFacts(r.e, now),
       })),
     };
   }
@@ -2017,9 +2246,11 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
     elevator: { label: '지하철 엘리베이터', match: (e) => e.cat === 'elevator' },
     aed: { label: 'AED(자동심장충격기)', match: (e) => e.cat === 'aed' },
     transit: { label: '역·버스·택시', match: (e) => e.cat === 'transit' },
+    medical: { label: '병원·약국', match: (e) => e.cat === 'medical' },
   };
 
   const TRANSIT_TYPE_LABEL = { subway: '지하철역', bus: '버스정류장', taxi: '택시 타기 좋은 곳' };
+  const MEDICAL_TYPE_LABEL = { er: '응급실', health: '보건소', pharmacy: '약국' };
 
   // 지하철역 근처(300m)에 엘리베이터 데이터가 있는지
   function stationElevatorText(st) {
@@ -2048,12 +2279,18 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
   // 지도에 보일지: 레이어가 켜져 있고, 가고 싶은 곳 종류이거나 길안내에 들어간 곳
   function entryShown(e) {
     const layer = S.layers[e.layerKey];
-    if (!layer || !layer.visible) return false;
     const d = currentDest();
+    // 약국은 90곳이 넘어서 레이어를 켜지 않고, '병원·약국' 목록·길안내에 든 곳만 보여 준다 [팀원1 추가]
+    if (d === 'medical' && e.kind === 'pharmacy' && ((S.destEntries || []).includes(e) || (S.routeEntries || []).includes(e))) return true;
+    if (!layer || !layer.visible) return false;
     if (d === 'all') return true;
     if (d === 'transit') {
       // 버스정류장이 많아서, 브리핑에 든 곳·길안내 경유지·지하철역만 보여 준다
       return (S.destEntries || []).includes(e) || (S.routeEntries || []).includes(e) || e.kind === 'subway';
+    }
+    if (d === 'medical') {
+      // 약국이 많아서, 목록에 든 약국만 보여 준다(응급실·보건소는 모두). '시설 레이어'에서 약국을 직접 켜면 모두 보인다
+      return (S.destEntries || []).includes(e) || (S.routeEntries || []).includes(e) || e.cat === 'medical';
     }
     return DESTS[d].match(e) || (S.routeEntries || []).includes(e);
   }
@@ -2074,6 +2311,7 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
     S.lastDest = d;
     if (d !== 'all') {
       Object.keys(S.layers).forEach((k) => {
+        if (k === 'pharmacy') return;   // 약국은 목록에 든 곳만 따로 보여 준다(entryShown)
         if (S.layers[k].entries.some((e) => DESTS[d].match(e))) showLayer(k);
       });
     }
@@ -2086,6 +2324,7 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
       case 'toilet': return toiletOpenNow(e.item, now);
       case 'heat': case 'cold': return shelterStatus(e, now);
       case 'charger': return chargerOpenNow(e.item, now);
+      case 'medical': return e.kind === 'er' ? undefined : medicalOpenNow(e, now);   // 응급실은 늘 운영이라 따로 표시
       default: return undefined;
     }
   }
@@ -2116,6 +2355,15 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
       case 'aed':
         add(it.detail);
         if (aedUnsure(it)) add('지도 위치가 실제와 다를 수 있음');
+        break;
+      case 'medical':
+        if (e.kind === 'er') {
+          add('🏥 응급실 · ' + (it.level || ''));
+          add('24시간');
+        } else {
+          add((e.kind === 'health' ? '🩺 보건소' : '💊 약국'));
+          add(medTodayText(e, now));
+        }
         break;
       case 'transit':
         if (e.kind === 'subway') {
@@ -2152,6 +2400,7 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
       return { dest: d, label: DESTS[d].label, items: null };  // 목록은 ui.js가 window.recommendations로 그린다
     }
     if (d === 'transit') return computeTransitList(st);
+    if (d === 'medical') return computeMedicalList(st, now);
     const rows = S.entries.filter((e) => DESTS[d].match(e)).map((e) => {
       const dist = distFromOrigin(e.item, st.profiles);   // [팀원1 수정] 걷는 길 거리(길을 못 찾으면 직선)
       return { e: e, m: dist.m, path: dist.path, status: entryOpenStatus(e, now) };
@@ -2382,7 +2631,8 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
     }
     if (!target) target = pool.find((e) => entryOpenStatus(e, now) !== false && !membersOnly(e)) ||
       pool.find((e) => entryOpenStatus(e, now) !== false) || null;
-    const label = d === 'toilet' ? toiletNeedLabel(profiles) : d === 'transit' ? TRANSIT_TYPE_LABEL[target ? target.kind : 'subway'] : DESTS[d].label;
+    const label = d === 'toilet' ? toiletNeedLabel(profiles) : d === 'transit' ? TRANSIT_TYPE_LABEL[target ? target.kind : 'subway'] :
+      d === 'medical' ? MEDICAL_TYPE_LABEL[target ? target.kind : 'pharmacy'] : DESTS[d].label;
     const wx = weatherRouteInfo(profiles, now);
     if (!target) {
       return buildPlan([], {
@@ -2392,9 +2642,11 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
     }
     const path = [{ e: target, need: 'dest', label: label }];
     // AED는 급하게 가는 곳이라 날씨 경유지(음수대·쉼터)를 넣지 않는다 [팀원1 추가]
+    // 병원·약국은 아픈 몸으로 가는 길이라 날씨 경유지는 넣지 않고, 쉬어 갈 곳(새 기능 2)만 넣는다 [팀원1 추가]
     const restNotes = [];
     if (d !== 'aed') {
-      insertWeatherStop(path, wx, profiles);
+      if (d !== 'medical') insertWeatherStop(path, wx, profiles);
+      else wx.notes = [];
       insertRestStops(path, profiles, speed, now, restNotes);   // [새 기능 2] AED는 급하니 넣지 않는다
     } else wx.notes = [];
     return buildPlan(path, { profiles: profiles, speed: speed, missing: [], basis: basis, title: '길안내', dest: d, weather: wx, restNotes: restNotes });
@@ -2502,6 +2754,16 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
     return rows.slice(0, EMERGENCY_AED_COUNT);
   }
 
+  // 가까운 응급실(직선거리 순). 응급실은 공원 밖 1~3km라 걷는 길 그래프 밖일 수 있어 직선거리로 고르고, 걷는 길이 있으면 함께 준다 [팀원1 추가]
+  function nearestErs(from) {
+    const list = (S.data.medical && S.data.medical.emergency_rooms) || [];
+    return list.filter(validPoint).map((h) => {
+      const straight = haversine(from.lat, from.lng, Number(h.lat), Number(h.lng));
+      return { name: h.name, level: h.level || '', tel: h.tel || '', addr: h.addr || '', lat: Number(h.lat), lng: Number(h.lng),
+        meters: Math.round(straight) };
+    }).sort((a, b) => a.meters - b.meters).slice(0, EMERGENCY_ER_COUNT);
+  }
+
   function sendEmergency(info) {
     window.emergencyInfo = info;
     document.dispatchEvent(new CustomEvent('emergencyready', { detail: { emergencyInfo: info } }));
@@ -2513,12 +2775,13 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
       status: status,
       basis: '출발 위치(' + label + ') 기준',
       aeds: S.data && S.origin ? nearestAeds(S.origin) : [],
+      ers: S.data && S.origin ? nearestErs(S.origin) : [],
     };
   }
 
   function onEmergencyOpen() {
     S.emergencyWanted = true;
-    if (!S.data || !S.origin) { sendEmergency({ status: 'nodata', aeds: [] }); return; }   // 데이터가 오면 다시 부른다
+    if (!S.data || !S.origin) { sendEmergency({ status: 'nodata', aeds: [], ers: [] }); return; }   // 데이터가 오면 다시 부른다
     S.emergencyWanted = false;
     sendEmergency(emergencyFromOrigin('locating'));
     if (!('geolocation' in navigator)) { sendEmergency(emergencyFromOrigin('nogps')); return; }
@@ -2533,6 +2796,7 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
           placeText: where.text, far: where.far,
           basis: '내 위치 기준',
           aeds: nearestAeds({ lat: lat, lng: lng }),
+          ers: nearestErs({ lat: lat, lng: lng }),
         });
       },
       () => { S.emergencyGps = null; sendEmergency(emergencyFromOrigin('nogps')); },
@@ -2541,15 +2805,17 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
   }
 
   // 응급 화면에서 'AED까지 길 보기': 내 위치(받았으면)에서 그 AED까지 길안내. ui.js가 먼저 목적지를 'AED'로 바꾼다
-  function onEmergencyRoute(lat, lng) {
+  // dest가 'medical'이면 응급실까지 (ui.js가 먼저 목적지를 '병원·약국'으로 바꾼다) [팀원1 추가]
+  function onEmergencyRoute(lat, lng, dest) {
     if (!S.data) return;
+    const cat = dest === 'medical' ? 'medical' : 'aed';
     const k = Number(lat) + ',' + Number(lng);
     S.destTarget = k;
-    S.lastDest = 'aed';
+    S.lastDest = cat;
     const g = S.emergencyGps;
     if (g) setOrigin(g.lat, g.lng, '내 위치', 'gps');   // 안에서 recompute()
     else recompute();
-    const target = S.entries.find((e) => e.cat === 'aed' && e.item.lat + ',' + e.item.lng === k);
+    const target = S.entries.find((e) => e.cat === cat && e.item.lat + ',' + e.item.lng === k);
     if (target) openEntryPopup(target, true);
   }
 
@@ -2615,7 +2881,8 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
       if (p === 'elderly') nearestToilets(ELDERLY_NEAR_COUNT).forEach((e) => hi.add(e));
     });
     // 추천 동선에 들어간 곳은 강조하고, 꺼진 레이어면 켠다
-    (S.routeEntries || []).forEach((e) => { hi.add(e); showLayer(e.layerKey); });
+    // 약국 레이어는 켜지 않는다(90곳이 넘음). 길안내에 든 약국은 entryShown이 따로 보여 준다 [팀원1 수정]
+    (S.routeEntries || []).forEach((e) => { hi.add(e); if (e.layerKey !== 'pharmacy') showLayer(e.layerKey); });
 
     // 새로 고른 프로필에 쉼터·충전기 등이 필요하면 그 레이어를 켠다(사용자가 다시 끌 수 있다)
     newlyChosen.forEach((p) => {
@@ -3124,7 +3391,8 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
       pitch: S.is3D ? PITCH_3D + 4 : 0, duration: reducedMotion() ? 0 : 1400, essential: false,
     });
     if (entry) {
-      showLayer(entry.layerKey);
+      if (entry.layerKey === 'pharmacy') entry.el.style.display = '';   // 약국은 그 핀만 보이게 [팀원1 수정]
+      else showLayer(entry.layerKey);
       openEntryPopup(entry, true); // 이미 flyTo로 옮기는 중 → 다 옮긴 뒤 잘림 확인
       S.map.once('moveend', ensurePopupVisible);
     } else {
@@ -3191,6 +3459,10 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
     d.transit = await fetch(TRANSIT_URL, { cache: 'no-cache' })
       .then((r) => (r.ok ? r.json() : null))
       .catch(() => null);
+    // 병원·약국 데이터도 없어도 지도는 동작한다
+    d.medical = await fetch(MEDICAL_URL, { cache: 'no-cache' })
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null);
     return d;
   }
 
@@ -3245,7 +3517,7 @@ html[data-theme="dark"] .op-gap-note{color:#9ca3af}
     document.addEventListener('themechange', (e) => { const d = (e && e.detail) || {}; if (S.overlayReady) applyMapTheme(d.theme === 'dark'); });
     document.addEventListener('focusplace', (e) => { const d = (e && e.detail) || {}; if (S.data) onFocusPlace(d.lat, d.lng); });
     document.addEventListener('emergencyopen', onEmergencyOpen);                       // [팀원1 추가] 응급 화면
-    document.addEventListener('emergencyroute', (e) => { const d = (e && e.detail) || {}; onEmergencyRoute(d.lat, d.lng); });
+    document.addEventListener('emergencyroute', (e) => { const d = (e && e.detail) || {}; onEmergencyRoute(d.lat, d.lng, d.dest); });
 
     const dataPromise = loadData().then((d) => ({ ok: true, d: d }), (err) => ({ ok: false, err: err }));
     const picked = await pickStyle();

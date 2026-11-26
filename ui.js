@@ -55,18 +55,19 @@
   };
 
   // 가고 싶은 곳 [팀원1 추가]
-  var DEST_ORDER = ['all', 'toilet', 'rest', 'shop', 'water', 'charger', 'transit', 'elevator', 'aed'];
+  var DEST_ORDER = ['all', 'toilet', 'rest', 'shop', 'water', 'charger', 'transit', 'elevator', 'aed', 'medical'];
   var DEST_LABEL = {
     all: '전체', toilet: '화장실', rest: '쉴 곳(쉼터)', shop: '매점·자판기', water: '음수대',
-    charger: '전동휠체어 충전기', elevator: '지하철 엘리베이터', aed: 'AED(자동심장충격기)', transit: '역·버스·택시'
+    charger: '전동휠체어 충전기', elevator: '지하철 엘리베이터', aed: 'AED(자동심장충격기)', transit: '역·버스·택시',
+    medical: '병원·약국'
   };
-  var DEST_ICON = { all: '🗺️', toilet: '🚻', rest: '🪑', shop: '🛒', water: '🚰', charger: '🔌', elevator: '🛗', aed: '💓', transit: '🚉' };
+  var DEST_ICON = { all: '🗺️', toilet: '🚻', rest: '🪑', shop: '🛒', water: '🚰', charger: '🔌', elevator: '🛗', aed: '💓', transit: '🚉', medical: '🏥' };
   // 상황별로 '추천' 표시를 붙일 곳
   var DEST_FOR_PROFILE = {
     wheelchair: ['toilet', 'charger', 'elevator'],
     stroller: ['toilet', 'elevator', 'rest'],
-    elderly: ['rest', 'toilet'],
-    pregnant: ['toilet', 'rest'],
+    elderly: ['rest', 'toilet', 'medical'],
+    pregnant: ['toilet', 'rest', 'medical'],
     concert: ['toilet', 'shop', 'water', 'transit']
   };
   var DEST_KEYWORDS = {
@@ -77,7 +78,10 @@
     charger: ['충전'],
     transit: ['택시', '버스', '지하철', '정류장', '교통', '역까지', '집에'],
     elevator: ['엘리베이터', '승강기'],
-    aed: ['aed', '심장', '제세동', '쓰러']
+    aed: ['aed', '심장', '제세동', '쓰러'],
+    // 병원·약국: '약'만으로는 '예약'·'약 300m'와, '아파'는 '아파트'와, '밴드'·'파스'는 '밴드 공연'·'파스타'와 헷갈려서 넣지 않는다
+    medical: ['병원', '약국', '보건소', '응급실', '의원', '진료', '아파요', '아파서', '아팠', '아픈', '아프', '다쳤', '다친', '두통', '배탈', '열나', '열이나',
+      '해열제', '진통제', '소화제', '상비약', '감기약', '반창고']
   };
   var WEATHER_ICON = { hot: '☀️', cold: '❄️', rain: '☔' };
 
@@ -104,6 +108,11 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
+  }
+
+  // 전화번호 → tel: 주소 (숫자와 +만 남긴다) [팀원1 추가]
+  function telHref(tel) {
+    return 'tel:' + String(tel || '').replace(/[^\d+]/g, '');
   }
 
   function isEmpty(v) {
@@ -925,9 +934,10 @@
     // 교통 브리핑(역·버스·택시를 골랐을 때)
     if (list.brief && list.brief.length) {
       html += '<div class="brief">' +
-        '<div class="brief-head"><b>교통 브리핑</b>' + speakButtonHtml('brief') + '</div><ul>' +
+        '<div class="brief-head"><b>' + esc(list.briefTitle || '교통 브리핑') + '</b>' + speakButtonHtml('brief') + '</div><ul>' +
         list.brief.map(function (b) {
-          return '<li><span class="brief-icon" aria-hidden="true">' + b.icon + '</span>' + esc(b.text) + '</li>';
+          return '<li><span class="brief-icon" aria-hidden="true">' + b.icon + '</span><span>' + esc(b.text) +
+            (b.tel ? ' <a class="brief-tel" href="' + telHref(b.tel) + '">전화</a>' : '') + '</span></li>';
         }).join('') + '</ul>' +
         (list.briefNote ? '<p class="brief-note">' + esc(list.briefNote) + '</p>' : '') + '</div>';
     }
@@ -947,6 +957,7 @@
               (facts ? '<span class="rec-facts">' + facts + '</span>' : '') +
             '</span>' +
           '</button>' +
+          (it.tel ? '<a class="rec-tel" href="' + telHref(it.tel) + '" aria-label="' + esc(it.name) + '에 전화하기 ' + esc(it.tel) + '"><span aria-hidden="true">📞</span> ' + esc(it.tel) + '</a>' : '') +
         '</li>';
     });
     html += '</ol>';
@@ -1005,8 +1016,11 @@
   }
 
   function briefSpeech(list) {
-    var parts = ['교통 브리핑이에요.'];
-    (list.brief || []).forEach(function (b) { parts.push(b.text.replace(/(\d[\d,]*)m/g, '$1미터') + '.'); });
+    var parts = [(list.briefTitle || '교통 브리핑') + '이에요.'];
+    (list.brief || []).forEach(function (b) {
+      parts.push(b.text.replace(/(\d[\d,.]*)km/g, '$1킬로미터').replace(/(\d[\d,]*)m/g, '$1미터') + '.');
+    });
+    if (list.briefNote && list.dest === 'medical') parts.push(list.briefNote);
     return speechClean(parts.join(' '));
   }
 
@@ -1090,6 +1104,7 @@
       copy.hidden = true;
     }
 
+    renderEmergencyErs(info, status);
     if (!info || status === 'nodata') {
       basis.textContent = '';
       list.innerHTML = '<li class="status is-loading">AED를 찾는 중이에요…</li>';
@@ -1115,6 +1130,39 @@
     }).join('');
   }
 
+  // 가까운 응급실 [팀원1 추가]: map.js가 emergencyInfo.ers = [{ name, level, tel, addr, lat, lng, meters }]를 채운다
+  function roughDistance(m) {
+    m = Number(m);
+    return m >= 1000 ? (Math.round(m / 100) / 10) + 'km' : (Math.round(m / 10) * 10) + 'm';
+  }
+
+  function renderEmergencyErs(info, status) {
+    var box = $('[data-role="em-ers"]');
+    if (!box) return;
+    if (!info || status === 'nodata' || !Array.isArray(info.ers)) {
+      box.innerHTML = '<li class="status is-loading">응급실을 찾는 중이에요…</li>';
+      return;
+    }
+    if (!info.ers.length) {
+      box.innerHTML = '<li class="em-aed-empty">응급실 정보를 불러오지 못했어요. 119에 전화하면 가까운 응급실을 알려 줘요.</li>';
+      return;
+    }
+    box.innerHTML = info.ers.map(function (h, i) {
+      return '<li class="em-aed em-er">' +
+        '<span class="em-aed-rank em-er-rank" aria-hidden="true">' + (i + 1) + '</span>' +
+        '<span class="em-aed-body">' +
+          '<b class="em-aed-place">' + esc(h.name) + '</b>' +
+          '<span class="em-aed-org">' + esc(h.level) + (h.addr ? ' · ' + esc(h.addr) : '') + '</span>' +
+          '<span class="em-aed-dist">직선 ' + roughDistance(h.meters) + '</span>' +
+        '</span>' +
+        '<span class="em-er-actions">' +
+          (h.tel ? '<a class="btn em-er-tel" href="' + telHref(h.tel) + '" aria-label="' + esc(h.name) + ' 대표번호로 전화 ' + esc(h.tel) + '"><span aria-hidden="true">📞</span> ' + esc(h.tel) + '</a>' : '') +
+          '<button type="button" class="btn em-route em-er-route" data-em-dest="medical" data-em-lat="' + esc(h.lat) + '" data-em-lng="' + esc(h.lng) + '">지도에서 보기</button>' +
+        '</span>' +
+      '</li>';
+    }).join('');
+  }
+
   function openEmergency() {
     var dlg = $('[data-role="em-dialog"]');
     if (!dlg) return;
@@ -1132,6 +1180,10 @@
       var list = $('[data-role="em-aeds"]');
       if (list && !(window.emergencyInfo && window.emergencyInfo.status !== 'nodata')) {
         list.innerHTML = '<li class="em-aed-empty">AED 정보를 불러오지 못했어요. 주변 사람에게 AED 위치를 물어보세요.</li>';
+      }
+      var ers = $('[data-role="em-ers"]');
+      if (ers && !(window.emergencyInfo && Array.isArray(window.emergencyInfo.ers))) {
+        ers.innerHTML = '<li class="em-aed-empty">응급실 정보를 불러오지 못했어요. 119에 전화하면 가까운 응급실을 알려 줘요.</li>';
       }
     }, EMERGENCY_WAIT_MS);
     send('emergencyopen', {});
@@ -1166,9 +1218,10 @@
     if (r) {
       var lat = Number(r.getAttribute('data-em-lat'));
       var lng = Number(r.getAttribute('data-em-lng'));
+      var dest = r.getAttribute('data-em-dest') === 'medical' ? 'medical' : 'aed';
       closeEmergency();
-      setDestination('aed');
-      send('emergencyroute', { lat: lat, lng: lng });
+      setDestination(dest);
+      send('emergencyroute', { lat: lat, lng: lng, dest: dest });
       var map = document.getElementById('map');
       if (map) {
         var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;

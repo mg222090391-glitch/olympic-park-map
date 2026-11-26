@@ -55,7 +55,7 @@
   <div class="emergency-bar">
     <button type="button" class="emergency-btn" data-role="em-open" aria-haspopup="dialog">
       <span class="em-btn-icon" aria-hidden="true">🚨</span>
-      <span class="em-btn-text">응급 상황 <span class="em-btn-sub">119 전화 · 가까운 AED</span></span>
+      <span class="em-btn-text">응급 상황 <span class="em-btn-sub">119 전화 · 가까운 AED · 응급실</span></span>
     </button>
   </div>
 
@@ -180,6 +180,7 @@
           <button type="button" class="dest-btn" data-dest="elevator" aria-pressed="false"><span class="dest-icon" aria-hidden="true">🛗</span><span class="dest-text">지하철 엘리베이터</span></button>
           <button type="button" class="dest-btn" data-dest="aed" aria-pressed="false"><span class="dest-icon" aria-hidden="true">💓</span><span class="dest-text">AED</span></button>
           <button type="button" class="dest-btn dest-wide" data-dest="transit" aria-pressed="false"><span class="dest-icon" aria-hidden="true">🚉</span><span class="dest-text">역·버스·택시 <small>교통 브리핑</small></span></button>
+          <button type="button" class="dest-btn dest-wide" data-dest="medical" aria-pressed="false"><span class="dest-icon" aria-hidden="true">🏥</span><span class="dest-text">병원·약국 <small>보건소·응급실</small></span></button>
         </div>
         <p class="hint">내 상황에 맞는 곳에는 <b>추천</b> 표시가 붙어요. 고르면 지도와 목록에 그곳만 남고, 날씨에 맞춰 길안내해요.</p>
         <!-- 보호자·일행에게 지금 설정 보내기 [팀원1 추가] -->
@@ -336,6 +337,8 @@
             <li><a href="https://www.data.go.kr/data/15098148/fileData.do" target="_blank" rel="noopener">서울시 지하철역 엘리베이터 위치정보</a></li>
             <li><a href="https://www.data.go.kr/data/15047371/fileData.do" target="_blank" rel="noopener">서울시 자동심장충격기(AED) 설치정보</a></li>
             <li><a href="https://www.data.go.kr/data/15012896/standard.do" target="_blank" rel="noopener">전국주차장정보표준데이터</a></li>
+            <li><a href="https://www.data.go.kr/data/15082972/fileData.do" target="_blank" rel="noopener">국립중앙의료원 전국 약국 정보 (운영시간)</a></li>
+            <li><a href="https://www.e-gen.or.kr/egen/search_emergency_room.do" target="_blank" rel="noopener">국립중앙의료원 E-GEN 응급실·병원(보건소) 찾기</a></li>
             <li><a href="https://www.data.go.kr/data/15084084/openapi.do" target="_blank" rel="noopener">기상청 단기예보(API)</a></li>
             <li><a href="https://www.data.go.kr/data/15085288/openapi.do" target="_blank" rel="noopener">기상청 생활기상지수(API)</a></li>
           </ul>
@@ -406,6 +409,12 @@
       <section class="em-sec em-todo" aria-labelledby="em-todo-title">
         <h3 id="em-todo-title">이렇게 하세요</h3>
         <p>119에 먼저 전화하고, 주변 사람에게 AED를 가져와 달라고 부탁하세요. 119 상담원이 심폐소생술 방법을 알려 줘요.</p>
+      </section>
+
+      <section class="em-sec" aria-labelledby="em-er-title">
+        <h3 id="em-er-title">가까운 응급실 <span class="em-sub">(24시간)</span></h3>
+        <ol class="em-aed-list em-er-list" data-role="em-ers"><li class="status is-loading">응급실을 찾는 중이에요…</li></ol>
+        <p class="em-note">위급하면 직접 가지 말고 119 구급차를 부르세요. 거리는 직선거리이고, 전화는 병원 대표번호예요(출처: 국립중앙의료원 E-GEN).</p>
       </section>
 
       <button type="button" class="btn em-close" data-role="em-close">응급 화면 닫기</button>
